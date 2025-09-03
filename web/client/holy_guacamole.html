@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Holy Guacamole! - Drive-Thru Order System</title>
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="Holy Guacamole! - AI-Powered Drive-Thru">
+    <meta property="og:description" content="Order delicious Mexican food with Sigmond, our AI drive-thru assistant. Fresh tacos, burritos, and more!">
+    <meta property="og:type" content="website">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #FFF8DC 0%, #FFEAA7 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: #C1272D;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: #FFD700;
+            font-size: 1.1rem;
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .left-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .right-panel {
+            width: 350px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #C1272D;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #FFD700;
+        }
+
+        #video-container {
+            background: #333;
+            border-radius: 15px;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Style any video element SignalWire injects */
+        #video-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 15px;
+        }
+        
+        /* Hide local video if present */
+        #video-container video[id*="local"] {
+            display: none;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: #568203;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        button:hover {
+            background: #6A9B04;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        button.danger {
+            background: #C1272D;
+        }
+
+        button.danger:hover {
+            background: #D43840;
+        }
+
+        #order-display {
+            min-height: 300px;
+        }
+
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: #FFF8DC;
+            border-radius: 8px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .order-item-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .order-item-price {
+            color: #568203;
+            font-weight: bold;
+        }
+
+        .order-totals {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #FFD700;
+        }
+
+        .total-line {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 10px;
+            font-size: 1.1rem;
+        }
+
+        .total-line.final {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #C1272D;
+            background: #FFD700;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        #status {
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .status-greeting {
+            background: #E8F5E9;
+            color: #2E7D32;
+        }
+
+        .status-ordering {
+            background: #FFF3E0;
+            color: #E65100;
+        }
+
+        .status-confirming {
+            background: #E3F2FD;
+            color: #1565C0;
+        }
+
+        .status-payment {
+            background: #FFD700;
+            color: #333;
+        }
+
+        .menu-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .menu-item {
+            padding: 10px;
+            background: #FFF8DC;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .menu-item:hover {
+            border-color: #568203;
+            transform: scale(1.05);
+        }
+
+        .menu-item-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .menu-item-price {
+            color: #568203;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        #result-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #568203;
+            color: white;
+            padding: 20px 40px;
+            border-radius: 15px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            z-index: 1000;
+        }
+
+        #result-message.show {
+            opacity: 1;
+        }
+
+        .order-number-display {
+            background: #FFD700;
+            color: #333;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 20px 0;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        #event-log {
+            max-height: 600px;
+            overflow-y: auto;
+            font-size: 0.9rem;
+            background: #f5f5f5;
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .event-entry {
+            padding: 5px;
+            margin-bottom: 5px;
+            border-left: 3px solid #ccc;
+            padding-left: 10px;
+        }
+
+        .event-entry.user-event {
+            border-color: #568203;
+            background: #E8F5E9;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+
+            .right-panel {
+                width: 100%;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🥑 Holy Guacamole!</h1>
+        <div class="subtitle">AI-Powered Drive-Thru Ordering</div>
+    </div>
+
+    <div class="main-container">
+        <div class="left-panel">
+            <!-- Video/Avatar Section -->
+            <div class="card">
+                <div id="video-container">
+                    <!-- SignalWire SDK will inject video elements here -->
+                    <div id="video-placeholder" style="color: #FFD700; font-size: 1.2rem; text-align: center;">
+                        🎥 Video will appear when connected
+                    </div>
+                </div>
+            </div>
+
+            <!-- Menu Display -->
+            <div class="card">
+                <div class="card-title">Menu</div>
+                <div id="menu-display">
+                    <!-- Menu will be loaded dynamically from backend -->
+                </div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <!-- Status Display -->
+            <div id="status" class="status-greeting">
+                Welcome to Holy Guacamole!
+            </div>
+
+            <!-- Order Display -->
+            <div class="card" id="order-display">
+                <div class="card-title">Your Order</div>
+                <div id="order-items">
+                    <div style="text-align: center; color: #999; padding: 50px;">
+                        Your order will appear here
+                    </div>
+                </div>
+                <div class="order-totals" id="order-totals" style="display: none;">
+                    <div class="total-line">
+                        <span>Subtotal:</span>
+                        <span id="subtotal">$0.00</span>
+                    </div>
+                    <div class="total-line">
+                        <span>Tax:</span>
+                        <span id="tax">$0.00</span>
+                    </div>
+                    <div class="total-line final">
+                        <span>Total:</span>
+                        <span id="total">$0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Number Display (hidden initially) -->
+            <div class="order-number-display" id="order-number" style="display: none;">
+                Order #<span id="order-number-value">0000</span>
+            </div>
+
+            <!-- Controls Section -->
+            <div class="card">
+                <div class="card-title">Controls</div>
+                <div class="controls">
+                    <button id="connectBtn">🎤 Start Ordering</button>
+                    <button id="hangupBtn" style="display:none;" class="danger">📞 End Call</button>
+                    <button id="muteBtn" style="display:none;">🔇 Mute</button>
+                </div>
+                <div style="margin-top: 15px;">
+                    <label>
+                        <input type="checkbox" id="startMuted"> Start muted
+                    </label>
+                    <label style="margin-left: 20px;">
+                        <input type="checkbox" id="showLog"> Show event log
+                    </label>
+                </div>
+            </div>
+
+            <!-- Event Log -->
+            <div class="card" id="event-log-container" style="display: none;">
+                <div class="card-title">Event Log</div>
+                <div id="event-log">
+                    <div id="event-entries"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Result Message Overlay -->
+    <div id="result-message"></div>
+
+    <!-- SignalWire SDK -->
+    <script src="signalwire.js"></script>
+    <!-- App Logic -->
+    <script src="holy_guacamole_app.js"></script>
+</body>
+</html>
