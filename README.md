@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="logo.png" alt="Holy Guacamole Logo" width="400">
+</div>
+
 # 🥑 Holy Guacamole! - AI-Powered Drive-Thru Implementation Guide
 
 **Live Demo:** [https://holyguacamole.signalwire.me](https://holyguacamole.signalwire.me)
