@@ -134,6 +134,11 @@ class HolyGuacamoleAgent(AgentBase):
                 "Current total: $${global_data.order_state.total}",
                 "When customer orders multiple items (e.g. 'two tacos and a drink'): CALL add_item FOR EACH ITEM SEPARATELY",
                 "CRITICAL: If customer says 'X and Y', you MUST call add_item twice - once for X and once for Y",
+                "⚠️ SPECIAL CASE - 'Never mind, I just want X' pattern:",
+                "  - If customer says 'never mind, I just want [item]' or 'forget everything, just give me [item]'",
+                "  - This means CLEAR EVERYTHING and start over with just that item",
+                "  - MUST DO IN ORDER: 1) CALL cancel_order(), 2) THEN CALL add_item(item)",
+                "  - Examples: 'never mind, just water', 'forget it all, I'll just have a taco'",
                 "When customer wants to remove items:",
                 "  - 'remove one water/bottle': CALL remove_item('water', quantity=1)",
                 "  - 'remove 5 waters/bottles': CALL remove_item('water', quantity=5)",
@@ -152,7 +157,7 @@ class HolyGuacamoleAgent(AgentBase):
                 "NEVER quote prices yourself - let the functions provide them"
             ]) \
             .set_step_criteria("Customer says they're done ordering") \
-            .set_functions(["add_item", "remove_item", "modify_quantity", "review_order", "finalize_order", "upgrade_to_combo"]) \
+            .set_functions(["add_item", "remove_item", "modify_quantity", "review_order", "finalize_order", "upgrade_to_combo", "cancel_order"]) \
             .set_valid_steps(["confirming_order"])
         
         # CONFIRMING ORDER STATE
@@ -1038,17 +1043,30 @@ class HolyGuacamoleAgent(AgentBase):
             order_state["order_number"] = None
             order_state["item_count"] = 0
             
-            response = "Order cancelled. How can I help you today?"
-            
-            result = SwaigFunctionResult(response)
-            save_order_state(result, order_state, global_data)
-            
-            # Go back to greeting
-            result.swml_change_step("greeting")
+            # Check current state to determine response
+            current_step = global_data.get("current_step", "greeting")
+            if current_step == "taking_order":
+                # Stay in taking_order for "never mind, I just want X" scenarios
+                response = "Alright, I've cleared everything. What would you like?"
+                result = SwaigFunctionResult(response)
+                save_order_state(result, order_state, global_data)
+                # Stay in taking_order state
+                result.context = "taking_order"
+            else:
+                # From confirming state or elsewhere, go back to greeting
+                response = "Order cancelled. How can I help you today?"
+                result = SwaigFunctionResult(response)
+                save_order_state(result, order_state, global_data)
+                # Go back to greeting
+                result.context = "greeting"
             
             # Send event to UI
             result.swml_user_event({
-                "type": "order_cancelled"
+                "type": "order_cancelled",
+                "items": [],
+                "subtotal": 0,
+                "tax": 0,
+                "total": 0
             })
             
             return result
