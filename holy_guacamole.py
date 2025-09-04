@@ -1523,7 +1523,7 @@ class HolyGuacamoleAgent(AgentBase):
         Following the multi_endpoint_agent.py pattern for cleaner architecture
         """
         if self._app is None:
-            from fastapi import FastAPI, Request
+            from fastapi import FastAPI, Request, Response
             from fastapi.middleware.cors import CORSMiddleware
             from fastapi.responses import FileResponse, JSONResponse
             from fastapi.staticfiles import StaticFiles
@@ -1578,9 +1578,20 @@ class HolyGuacamoleAgent(AgentBase):
             # Create router for SWML endpoints
             router = self.as_router()
             
-            # Mount the SWML router at /swml (before static files)
-            # This provides /swml and /swml/swaig endpoints
+            # Mount the SWML router at /swml 
             app.include_router(router, prefix=self.route)
+            
+            # Add explicit handler for /swml (without trailing slash) since SignalWire posts here
+            @app.post("/swml")
+            async def handle_swml(request: Request, response: Response):
+                """Handle POST to /swml - SignalWire's webhook endpoint"""
+                return await self._handle_root_request(request)
+            
+            # Optionally also handle GET for testing
+            @app.get("/swml")
+            async def handle_swml_get(request: Request, response: Response):
+                """Handle GET to /swml for testing"""
+                return await self._handle_root_request(request)
             
             # Mount static files at root (this handles everything else)
             # The web directory contains all static files (HTML, JS, CSS, videos, etc.)
