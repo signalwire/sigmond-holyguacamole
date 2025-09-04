@@ -1517,17 +1517,21 @@ class HolyGuacamoleAgent(AgentBase):
         )
         self.menu_vectors = self.vectorizer.fit_transform(corpus)
     
-    def serve(self, host=None, port=None):
-        """Override serve to add web UI routes on same port"""
-        import uvicorn
-        from fastapi import FastAPI
-        from fastapi.middleware.cors import CORSMiddleware
-        from fastapi.responses import FileResponse
-        
+    def get_app(self):
+        """
+        Override get_app to create custom app with all endpoints
+        Following the multi_endpoint_agent.py pattern for cleaner architecture
+        """
         if self._app is None:
+            from fastapi import FastAPI, Request
+            from fastapi.middleware.cors import CORSMiddleware
+            from fastapi.responses import FileResponse, JSONResponse
+            from fastapi.staticfiles import StaticFiles
+            
+            # Create the FastAPI app
             app = FastAPI(
                 title="Holy Guacamole Drive-Thru",
-                description="AI-powered Mexican food ordering system"
+                description="AI-powered Mexican food ordering system with Sigmond"
             )
             
             # Add CORS middleware
@@ -1540,86 +1544,92 @@ class HolyGuacamoleAgent(AgentBase):
             )
             
             # Set up paths
-            bot_dir = Path(__file__).parent
-            web_dir = bot_dir / "web"
-            client_dir = web_dir / "client"
+            self.bot_dir = Path(__file__).parent
+            self.web_dir = self.bot_dir / "web"
             
-            # Add web UI routes BEFORE mounting agent router
-            @app.get("/")
-            async def serve_index():
-                """Serve the main HTML file at root"""
-                index_path = client_dir / "holy_guacamole.html"
-                if index_path.exists():
-                    return FileResponse(str(index_path), media_type="text/html")
-                return {"error": "Web interface not found"}
-            
-            @app.get("/holy_guacamole_app.js")
-            async def serve_app_js():
-                """Serve the JavaScript application"""
-                js_path = client_dir / "holy_guacamole_app.js"
-                if js_path.exists():
-                    return FileResponse(str(js_path), media_type="application/javascript")
-                return {"error": "app.js not found"}
-            
-            @app.get("/signalwire.js")
-            async def serve_signalwire_js():
-                """Serve the SignalWire SDK"""
-                js_path = client_dir / "signalwire.js"
-                if js_path.exists():
-                    return FileResponse(str(js_path), media_type="application/javascript")
-                return {"error": "signalwire.js not found"}
-            
+            # API Routes (before static files so they take precedence)
             @app.get("/api/menu")
             async def get_menu():
                 """Serve the menu data from backend"""
-                return {"menu": MENU}
+                return JSONResponse(content={"menu": MENU})
             
-            @app.get("/sigmond_cc_idle.mp4")
-            async def serve_idle_video():
-                """Serve Sigmond idle video"""
-                video_file = web_dir / "sigmond_cc_idle.mp4"
-                if video_file.exists():
-                    return FileResponse(
-                        video_file,
-                        media_type='video/mp4',
-                        headers={"Cache-Control": "public, max-age=3600"}
-                    )
-                return {"error": "sigmond_cc_idle.mp4 not found"}
+            @app.get("/api/info")
+            async def get_info():
+                """Provide system information"""
+                return JSONResponse(content={
+                    "agent": self.get_name(),
+                    "version": "1.0.0",
+                    "endpoints": {
+                        "ui": "/",
+                        "menu": "/api/menu",
+                        "swml": "/swml",
+                        "swaig": "/swml/swaig",
+                        "health": "/health"
+                    }
+                })
             
-            @app.get("/sigmond_cc_talking.mp4")
-            async def serve_talking_video():
-                """Serve Sigmond talking video"""
-                video_file = web_dir / "sigmond_cc_talking.mp4"
-                if video_file.exists():
-                    return FileResponse(
-                        video_file,
-                        media_type='video/mp4',
-                        headers={"Cache-Control": "public, max-age=3600"}
-                    )
-                return {"error": "sigmond_cc_talking.mp4 not found"}
+            @app.get("/health")
+            async def health_check():
+                return JSONResponse(content={
+                    "status": "healthy", 
+                    "agent": self.get_name()
+                })
             
-            # Mount agent routes at the path specified in constructor
+            # Create router for SWML endpoints
             router = self.as_router()
-            # The route is already set in the constructor, so mount at that path
+            
+            # Mount the SWML router at /swml (before static files)
+            # This provides /swml and /swml/swaig endpoints
             app.include_router(router, prefix=self.route)
+            
+            # Mount static files at root (this handles everything else)
+            # The web directory contains all static files (HTML, JS, CSS, videos, etc.)
+            if self.web_dir.exists():
+                app.mount("/", StaticFiles(directory=str(self.web_dir), html=True), name="static")
             
             self._app = app
         
-        # Use parent's serve with our custom app
-        host = host or self.host
-        port = port or self.port
+        return self._app
+    
+    def serve(self, host=None, port=None):
+        """
+        Override serve to use our custom app
+        Now simplified - just handles serving, not app creation
+        """
+        import uvicorn
         
+        # Get host and port from parameters or defaults
+        host = host or self.host or "0.0.0.0"
+        port = port or self.port or 8080
+        
+        # Get our custom app with all endpoints
+        app = self.get_app()
+        
+        # Get auth credentials for display
+        username, password = self.get_basic_auth_credentials()
+        
+        # Print startup information
         print("=" * 60)
         print("🥑 Holy Guacamole! Drive-Thru System")
         print("=" * 60)
-        print(f"\nWeb UI: http://localhost:{port}/")
-        print(f"SWML endpoint: http://localhost:{port}/swml")
-        
-        username, password = self.get_basic_auth_credentials()
-        print(f"Basic Auth for SWML: {username}:{password}")
+        print(f"\nServer: http://{host}:{port}")
+        print(f"Basic Auth: {username}:{password}")
+        print("\nEndpoints:")
+        print(f"  Web UI:     http://{host}:{port}/")
+        print(f"  Menu API:   http://{host}:{port}/api/menu")
+        print(f"  System API: http://{host}:{port}/api/info")
+        print(f"  SWML:       http://{host}:{port}/swml")
+        print(f"  SWAIG:      http://{host}:{port}/swml/swaig")
+        print(f"  Health:     http://{host}:{port}/health")
         print("=" * 60)
+        print("\nPress Ctrl+C to stop\n")
         
-        uvicorn.run(self._app, host=host, port=port)
+        # Run the server
+        try:
+            uvicorn.run(app, host=host, port=port)
+        except KeyboardInterrupt:
+            print("\n🛑 Stopping Holy Guacamole server...")
+            print("Thank you for using Holy Guacamole! 🥑")
 
 
 if __name__ == "__main__":
