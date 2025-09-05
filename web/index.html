@@ -505,11 +505,48 @@
             .main-container {
                 padding: 10px;
                 padding-top: 110px;
+                display: flex;
+                flex-direction: column;
             }
             
+            /* Merge panels into single column */
+            .left-panel,
             .right-panel {
                 width: 100%;
+                max-width: none;
+                display: contents; /* Remove panel wrapper, let children flow */
             }
+            
+            /* Order elements for mobile */
+            #video-container {
+                order: 1;
+                margin-bottom: 20px;
+            }
+            
+            #status {
+                order: 2;
+            }
+            
+            #controls-card {
+                order: 3;
+            }
+            
+            #order-display {
+                order: 4;
+            }
+            
+            #order-number {
+                order: 5;
+            }
+            
+            #menu-card {
+                order: 6;
+            }
+            
+            #event-log-container {
+                order: 7;
+            }
+            
         }
     </style>
 </head>
@@ -533,7 +570,7 @@
             </div>
 
             <!-- Menu Display -->
-            <div class="card">
+            <div class="card" id="menu-card">
                 <div class="card-title">Menu</div>
                 <div id="menu-display">
                     <!-- Menu will be loaded dynamically from backend -->
@@ -577,7 +614,7 @@
             </div>
 
             <!-- Controls Section -->
-            <div class="card">
+            <div class="card" id="controls-card">
                 <div class="card-title">Controls</div>
                 <div class="controls">
                     <button id="connectBtn">🎤 Start Ordering</button>
