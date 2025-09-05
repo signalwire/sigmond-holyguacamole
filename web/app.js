@@ -160,12 +160,18 @@ function updateStatus(status, message) {
             statusDiv.textContent = message || 'Taking your order...';
             break;
         case 'confirming':
+        case 'confirming_order':
             statusDiv.className = 'status-confirming';
             statusDiv.textContent = message || 'Confirming your order...';
             break;
         case 'payment':
+        case 'payment_processing':
             statusDiv.className = 'status-payment';
             statusDiv.textContent = message || 'Processing payment...';
+            break;
+        case 'order_complete':
+            statusDiv.className = 'status-payment';
+            statusDiv.textContent = message || 'Order Complete!';
             break;
         default:
             statusDiv.textContent = message || 'Ready';

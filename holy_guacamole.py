@@ -68,8 +68,8 @@ MENU_ALIASES = {
     "Q002": ["chicken quesadilla", "chicken and cheese quesadilla"],
     "C001": ["taco meal", "taco combo", "taco deal", "taco special", "combo taco"],
     "C002": ["burrito meal", "burrito combo", "burrito deal", "burrito special", "combo burrito"],
-    "S001": ["chips", "nachos", "chips and salsa", "chips with salsa", "salsa and chips", "just chips"],
-    "S002": ["guac", "chips and guac", "chips with guacamole", "guacamole and chips", "guac and chips"],
+    "S001": ["chips", "nachos", "chips and salsa", "chips with salsa", "salsa and chips", "just chips", "salsa", "chips n salsa"],
+    "S002": ["guac", "chips and guac", "chips with guacamole", "guacamole and chips", "guac and chips", "guacamole", "chips n guacamole"],
     "T001": ["beef taco", "beef tacos", "ground beef taco", "regular taco", "taco beef"],
     "T002": ["chicken taco", "chicken tacos", "grilled chicken taco", "taco chicken"],
     "T003": ["bean taco", "bean tacos", "vegetarian taco", "veggie taco"],
@@ -329,21 +329,23 @@ class HolyGuacamoleAgent(AgentBase):
                 return None
             
             # Count actual quantities of each item type
-            taco_count = sum(item["quantity"] for item in items if "taco" in item["name"].lower())
-            burrito_count = sum(item["quantity"] for item in items if "burrito" in item["name"].lower())
-            chips_count = sum(item["quantity"] for item in items if "chips" in item["name"].lower() and "salsa" in item["name"].lower())
-            drink_count = sum(item["quantity"] for item in items if "small" in item["name"].lower() and "drink" in item["name"].lower())
-            combo_count = sum(item["quantity"] for item in items if "combo" in item["name"].lower())
+            taco_count = sum(item["quantity"] for item in items if "taco" in item["name"].lower() and "combo" not in item["name"].lower())
+            burrito_count = sum(item["quantity"] for item in items if "burrito" in item["name"].lower() and "combo" not in item["name"].lower())
+            chips_count = sum(item["quantity"] for item in items if "chips" in item["name"].lower() and "salsa" in item["name"].lower() and "combo" not in item["name"].lower())
+            drink_count = sum(item["quantity"] for item in items if "small" in item["name"].lower() and "drink" in item["name"].lower() and "combo" not in item["name"].lower())
             
-            # If we already have combos, don't suggest more
-            if combo_count > 0:
-                return None
+            # Check what combos we already have
+            taco_combo_count = sum(item["quantity"] for item in items if "taco combo" in item["name"].lower())
+            burrito_combo_count = sum(item["quantity"] for item in items if "burrito combo" in item["name"].lower())
+            
+            # Don't suggest upgrades for items already in combos
+            # But allow suggesting different combo types
             
             # Check both combo opportunities and suggest the best one
             suggestions = []
             
-            # Check for taco combo (2 tacos + 1 chips + 1 drink)
-            if taco_count >= 2 and chips_count >= 1 and drink_count >= 1:
+            # Check for taco combo (2 tacos + 1 chips + 1 drink) - only if we don't already have taco combos
+            if taco_combo_count == 0 and taco_count >= 2 and chips_count >= 1 and drink_count >= 1:
                 taco_price = 3.49 * 2
                 chips_price = 2.99
                 drink_price = 1.99
@@ -352,13 +354,13 @@ class HolyGuacamoleAgent(AgentBase):
                 savings = round(current_total - combo_price, 2)  # $1.97
                 suggestions.append(("taco", savings, f"💡 Great news! I can upgrade your 2 tacos, chips & salsa, and drink to a Taco Combo and save you {dollars_to_words(savings)}!"))
             
-            # Check for burrito combo (1 burrito + 1 chips + 1 drink)
-            # Check if we have ADDITIONAL items for burrito combo beyond taco combo
+            # Check for burrito combo (1 burrito + 1 chips + 1 drink) - only if we don't already have burrito combos
+            # Check if we have ADDITIONAL items for burrito combo beyond taco combo suggestion
             # If taco combo uses 1 chips and 1 drink, we need 2 total chips and 2 drinks for both combos
             min_chips_for_burrito = 2 if (taco_count >= 2 and len(suggestions) > 0) else 1
             min_drinks_for_burrito = 2 if (taco_count >= 2 and len(suggestions) > 0) else 1
             
-            if burrito_count >= 1 and chips_count >= min_chips_for_burrito and drink_count >= min_drinks_for_burrito:
+            if burrito_combo_count == 0 and burrito_count >= 1 and chips_count >= min_chips_for_burrito and drink_count >= min_drinks_for_burrito:
                 burrito_price = 8.99
                 chips_price = 2.99
                 drink_price = 1.99
@@ -372,7 +374,7 @@ class HolyGuacamoleAgent(AgentBase):
                 total_savings = suggestions[0][1] + suggestions[1][1]
                 return f"💡 Amazing! You qualify for TWO combo upgrades! I can upgrade your tacos AND burrito meals to combos, saving you a total of {dollars_to_words(total_savings)}! Just say 'yes' or 'upgrade both' to save money."
             elif len(suggestions) == 1:
-                return suggestions[0][2] + " Just say 'yes' or 'upgrade to combo' to save money."
+                return suggestions[0][2] + " Just say 'yes' to save money."
             
             return None
         
@@ -381,7 +383,25 @@ class HolyGuacamoleAgent(AgentBase):
             item_lower = item_name.lower().strip()
             print(f"[DEBUG] Searching for: '{item_name}' (normalized: '{item_lower}')")
             
-            # Try TF-IDF matching first if available
+            # First check exact match with menu item names
+            for category, items in MENU.items():
+                for sku, item_data in items.items():
+                    if item_lower == item_data["name"].lower():
+                        print(f"[DEBUG] Exact match found: {item_data['name']} (SKU: {sku})")
+                        return sku, item_data, category
+            
+            # Check aliases for exact match
+            for sku, aliases in MENU_ALIASES.items():
+                for alias in aliases:
+                    if item_lower == alias.lower():
+                        print(f"[DEBUG] Alias match found: '{alias}' -> SKU: {sku}")
+                        # Find the item data from the SKU
+                        for category, items in MENU.items():
+                            if sku in items:
+                                print(f"[DEBUG] Resolved to: {items[sku]['name']}")
+                                return sku, items[sku], category
+            
+            # Try TF-IDF matching if no exact match found
             if HAS_SKLEARN and self.vectorizer and self.menu_vectors is not None:
                 try:
                     # Vectorize the user input
@@ -411,26 +431,10 @@ class HolyGuacamoleAgent(AgentBase):
                     print(f"[DEBUG] TF-IDF matching failed: {e}, no match found")
                     return None, None, None
             
-            # Fallback to fuzzy matching
+            # Fallback to fuzzy matching (only if TF-IDF is not available)
             # Remove common words
             item_clean = item_lower.replace("the ", "").replace("a ", "").replace("an ", "").replace("just ", "").replace("plain ", "").strip()
             print(f"[DEBUG] Fuzzy matching with cleaned: '{item_clean}'")
-            
-            # First check exact match with menu item names
-            for category, items in MENU.items():
-                for sku, item_data in items.items():
-                    if item_lower == item_data["name"].lower():
-                        print(f"[DEBUG] Exact match found: {item_data['name']} (SKU: {sku})")
-                        return sku, item_data, category
-            
-            # Check aliases
-            for sku, aliases in MENU_ALIASES.items():
-                for alias in aliases:
-                    if item_clean == alias.lower() or item_lower == alias.lower():
-                        # Find the item data from the SKU
-                        for category, items in MENU.items():
-                            if sku in items:
-                                return sku, items[sku], category
             
             # Score-based matching
             best_match = None
@@ -512,6 +516,7 @@ class HolyGuacamoleAgent(AgentBase):
         # Core ordering functions
         @self.tool(
             name="add_item",
+            wait_file="/keyspressing.wav",
             description="Add an item to the order",
             parameters={
                 "type": "object",
@@ -666,6 +671,7 @@ class HolyGuacamoleAgent(AgentBase):
         
         @self.tool(
             name="remove_item",
+            wait_file="/keyspressing.wav",
             description="Remove an item from the order",
             parameters={
                 "type": "object",
@@ -809,6 +815,7 @@ class HolyGuacamoleAgent(AgentBase):
         
         @self.tool(
             name="modify_quantity",
+            wait_file="/keyspressing.wav",
             description="Change the quantity of an item already in the order",
             parameters={
                 "type": "object",
@@ -903,6 +910,7 @@ class HolyGuacamoleAgent(AgentBase):
         
         @self.tool(
             name="review_order",
+            wait_file="/keyspressing.wav",
             description="Review the current order",
             parameters={
                 "type": "object",
@@ -935,6 +943,7 @@ class HolyGuacamoleAgent(AgentBase):
         
         @self.tool(
             name="finalize_order",
+            wait_file="/keyspressing.wav",
             description="Finalize order and move to confirmation",
             parameters={
                 "type": "object",
@@ -972,6 +981,7 @@ class HolyGuacamoleAgent(AgentBase):
         
         @self.tool(
             name="process_payment",
+            wait_file="/keyspressing.wav",
             description="Process the payment",
             parameters={
                 "type": "object",
@@ -1007,6 +1017,7 @@ class HolyGuacamoleAgent(AgentBase):
         
         @self.tool(
             name="complete_order",
+            wait_file="/keyspressing.wav",
             description="Complete the order",
             parameters={
                 "type": "object",
@@ -1047,6 +1058,7 @@ class HolyGuacamoleAgent(AgentBase):
         
         @self.tool(
             name="cancel_order",
+            wait_file="/keyspressing.wav",
             description="Clear/cancel the entire order. Use when customer says 'cancel', 'start over', 'never mind', or before adding a single item when they say 'I only want X'",
             parameters={
                 "type": "object",
@@ -1096,6 +1108,7 @@ class HolyGuacamoleAgent(AgentBase):
         
         @self.tool(
             name="new_order",
+            wait_file="/keyspressing.wav",
             description="Start a new order",
             parameters={
                 "type": "object",
@@ -1132,6 +1145,7 @@ class HolyGuacamoleAgent(AgentBase):
         
         @self.tool(
             name="upgrade_to_combo",
+            wait_file="/keyspressing.wav",
             description="Upgrade individual items to a combo meal",
             parameters={
                 "type": "object",

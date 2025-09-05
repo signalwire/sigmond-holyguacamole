@@ -24,29 +24,90 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #FFF8DC 0%, #FFEAA7 100%);
+            background: #1a1a1a;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            margin: 0;
+            position: relative;
         }
-
-        .header {
-            background: #C1272D;
+        
+        /* Terracotta roof tiles pattern */
+        .roof-tiles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100px;
+            background: 
+                repeating-linear-gradient(
+                    90deg,
+                    #B85450 0px,
+                    #C1665A 15px,
+                    #9C4A45 30px,
+                    #B85450 45px
+                ),
+                repeating-conic-gradient(
+                    from 180deg at 50% 0%,
+                    #A0522D 0deg,
+                    #C1665A 60deg,
+                    #8B4513 120deg,
+                    #A0522D 180deg
+                );
+            background-size: 90px 50px, 45px 25px;
+            background-position: 0 0, 0 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .roof-title {
+            position: relative;
+            z-index: 2;
             color: white;
-            padding: 1rem;
             text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
         }
-
-        h1 {
-            font-size: 2.5rem;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-            margin-bottom: 0.5rem;
+        
+        .roof-title h1 {
+            font-size: 2rem;
+            margin: 0;
+            line-height: 1.2;
         }
-
-        .subtitle {
-            color: #FFD700;
-            font-size: 1.1rem;
+        
+        .roof-title p {
+            font-size: 1rem;
+            margin: 0;
+            opacity: 0.95;
+        }
+        
+        .roof-tiles::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100%;
+            background: repeating-conic-gradient(
+                from 0deg at 45px 50px,
+                transparent 0deg 180deg,
+                rgba(139, 69, 19, 0.3) 180deg 360deg
+            );
+            background-size: 90px 50px;
+            background-position: 0 0;
+        }
+        
+        .roof-tiles::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.4), transparent);
         }
 
         .main-container {
@@ -54,6 +115,7 @@
             display: flex;
             gap: 20px;
             padding: 20px;
+            padding-top: 120px; /* Space for roof tiles */
             max-width: 1400px;
             margin: 0 auto;
             width: 100%;
@@ -64,6 +126,8 @@
             display: flex;
             flex-direction: column;
             gap: 20px;
+            align-items: center;
+            justify-content: flex-start;
         }
 
         .right-panel {
@@ -77,7 +141,8 @@
             background: white;
             border-radius: 15px;
             padding: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.1);
         }
 
         .card-title {
@@ -90,18 +155,19 @@
         }
 
         #video-container {
-            background: linear-gradient(135deg, #FFF8DC 0%, #FFEAA7 30%, #FFD700 100%);
+            background: linear-gradient(135deg, #F5E6D3 0%, #E6D7B8 50%, #D4C5A0 100%);
             border-radius: 15px;
-            /* 1620×1080 = 3:2 aspect ratio */
-            aspect-ratio: 1620 / 1080;
-            width: 100%;
-            max-width: 810px; /* Half of 1620 for reasonable display size */
-            margin: 0 auto;
+            width: 810px !important;  /* Exactly half of 1620 for display */
+            height: 540px !important; /* Exactly half of 1080 for display */
             display: flex;
             align-items: center;
             justify-content: center;
             position: relative;
             overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 0 !important;
+            margin: 0 auto !important;
         }
         
         #video-placeholder {
@@ -109,31 +175,36 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: 0;
             text-align: center;
+            width: 100%;
+            height: 100%;
         }
 
         /* Style any video element SignalWire injects */
         #video-container video,
         #video-container > div > video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover; /* Changed to cover to fill the container */
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important; /* Cover to fill without distortion */
             border-radius: 15px;
             position: absolute;
             top: 0;
             left: 0;
             z-index: 2;
-            background: #000;
+            margin: 0 !important;
+            padding: 0 !important;
         }
         
         /* SignalWire may inject wrapper divs */
         #video-container > div {
-            width: 100%;
-            height: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
+            width: 100% !important;
+            height: 100% !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
         }
         
         /* Hide local video if present */
@@ -416,21 +487,21 @@
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>🥑 Holy Guacamole!</h1>
-        <div class="subtitle">AI-Powered Drive-Thru Ordering</div>
+    <div class="roof-tiles">
+        <div class="roof-title">
+            <h1>🥑 Holy Guacamole!</h1>
+            <p>AI-Powered Drive-Thru Ordering</p>
+        </div>
     </div>
 
     <div class="main-container">
         <div class="left-panel">
             <!-- Video/Avatar Section -->
-            <div class="card">
-                <div id="video-container">
-                    <!-- SignalWire SDK will inject video elements here -->
-                    <div id="video-placeholder">
-                        <img src="/logo.png" alt="Holy Guacamole Logo" style="max-width: 200px; opacity: 0.7;">
-                        <p style="color: #568203; margin-top: 20px; font-size: 1.1rem;">Click "Start Ordering" to begin</p>
-                    </div>
+            <div id="video-container">
+                <!-- SignalWire SDK will inject video elements here -->
+                <div id="video-placeholder">
+                    <img src="/logo.png" alt="Holy Guacamole Logo" style="max-width: 200px;">
+                    <p style="color: #568203; margin-top: 20px; font-size: 1.1rem;">Click "Start Ordering" to begin</p>
                 </div>
             </div>
 
