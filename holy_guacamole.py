@@ -1181,11 +1181,18 @@ class HolyGuacamoleAgent(AgentBase):
                 chips_count = sum(item["quantity"] for item in order_state["items"] if "chips" in item["name"].lower() and "salsa" in item["name"].lower())
                 drink_count = sum(item["quantity"] for item in order_state["items"] if "small" in item["name"].lower() and "drink" in item["name"].lower())
                 
+                # Calculate how many of each combo we can make
+                max_taco_combos = min(taco_count // 2, chips_count, drink_count)
+                # After taco combos, recalculate remaining items for burrito combos
+                remaining_chips = chips_count - max_taco_combos
+                remaining_drinks = drink_count - max_taco_combos
+                max_burrito_combos = min(burrito_count, remaining_chips, remaining_drinks)
+                
                 # Track what we need to remove
-                tacos_to_remove = 2 if taco_count >= 2 else 0
-                burritos_to_remove = 1 if burrito_count >= 1 else 0
-                chips_to_remove = min(chips_count, (1 if tacos_to_remove > 0 else 0) + (1 if burritos_to_remove > 0 else 0))
-                drinks_to_remove = min(drink_count, (1 if tacos_to_remove > 0 else 0) + (1 if burritos_to_remove > 0 else 0))
+                tacos_to_remove = max_taco_combos * 2
+                burritos_to_remove = max_burrito_combos
+                chips_to_remove = max_taco_combos + max_burrito_combos
+                drinks_to_remove = max_taco_combos + max_burrito_combos
                 
                 # Process each item
                 for item in order_state["items"]:
@@ -1255,25 +1262,25 @@ class HolyGuacamoleAgent(AgentBase):
                     if item_to_keep["quantity"] > 0:
                         items_to_keep.append(item_to_keep)
                 
-                # Add both combos
-                if any("taco" in item["name"].lower() for item in removed_items):
+                # Add both combos with proper quantities
+                if max_taco_combos > 0:
                     combos_to_add.append({
                         "sku": "C001",
                         "name": "Taco Combo",
                         "description": "2 tacos (your choice) + chips & salsa + small drink",
                         "price": 9.99,
-                        "quantity": 1,
-                        "total": 9.99
+                        "quantity": max_taco_combos,
+                        "total": round(9.99 * max_taco_combos, 2)
                     })
                 
-                if any("burrito" in item["name"].lower() for item in removed_items):
+                if max_burrito_combos > 0:
                     combos_to_add.append({
                         "sku": "C002",
                         "name": "Burrito Combo",
                         "description": "Any burrito + chips & salsa + small drink",
                         "price": 12.99,
-                        "quantity": 1,
-                        "total": 12.99
+                        "quantity": max_burrito_combos,
+                        "total": round(12.99 * max_burrito_combos, 2)
                     })
                 
                 # Calculate total savings
@@ -1288,7 +1295,13 @@ class HolyGuacamoleAgent(AgentBase):
                 order_state["item_count"] = sum(item["quantity"] for item in order_state["items"])
                 
                 # Build response
-                combo_names = " and ".join([c["name"] for c in combos_to_add])
+                combo_descriptions = []
+                for c in combos_to_add:
+                    if c["quantity"] > 1:
+                        combo_descriptions.append(f"{c['quantity']} {c['name']}s")
+                    else:
+                        combo_descriptions.append(f"a {c['name']}")
+                combo_names = " and ".join(combo_descriptions)
                 response = f"Awesome! I've upgraded your order to {combo_names}, saving you {dollars_to_words(savings)}!"
                 response += f" Your new total is {dollars_to_words(order_state['total'])}."
                 
@@ -1310,106 +1323,178 @@ class HolyGuacamoleAgent(AgentBase):
                 
                 return result
             
-            # Original single combo upgrade logic
+            # Original single combo upgrade logic - now handles multiple combos
             removed_items = []
             items_to_keep = []
             
             if combo_type == "taco":
-                # Remove 2 tacos, chips & salsa, and small drink for Taco Combo
-                tacos_needed = 2
-                has_chips = False
-                has_drink = False
+                # Calculate how many taco combos we can make
+                # Need: 2 tacos, 1 chips & salsa, 1 small drink per combo
+                taco_count = sum(item["quantity"] for item in order_state["items"] if "taco" in item["name"].lower())
+                chips_count = sum(item["quantity"] for item in order_state["items"] if "chips" in item["name"].lower() and "salsa" in item["name"].lower())
+                drink_count = sum(item["quantity"] for item in order_state["items"] if "small" in item["name"].lower() and "drink" in item["name"].lower())
                 
+                # Maximum combos we can make
+                max_combos = min(taco_count // 2, chips_count, drink_count)
+                
+                if max_combos <= 0:
+                    return SwaigFunctionResult("You don't have enough items for a Taco Combo. You need 2 tacos, chips & salsa, and a small drink.")
+                
+                # Track how many of each item we need to remove
+                tacos_to_remove = max_combos * 2
+                chips_to_remove = max_combos
+                drinks_to_remove = max_combos
+                
+                # Process each item
                 for item in order_state["items"]:
                     item_lower = item["name"].lower()
                     
-                    # Remove up to 2 tacos
-                    if "taco" in item_lower and tacos_needed > 0:
-                        if item["quantity"] <= tacos_needed:
-                            # Remove all of this item
+                    # Remove tacos
+                    if "taco" in item_lower and tacos_to_remove > 0:
+                        if item["quantity"] <= tacos_to_remove:
                             removed_items.append(item)
-                            tacos_needed -= item["quantity"]
+                            tacos_to_remove -= item["quantity"]
                         else:
                             # Remove only what we need, keep the rest
                             removed_item = item.copy()
-                            removed_item["quantity"] = tacos_needed
-                            removed_item["total"] = round(removed_item["price"] * tacos_needed, 2)
+                            removed_item["quantity"] = tacos_to_remove
+                            removed_item["total"] = round(removed_item["price"] * tacos_to_remove, 2)
                             removed_items.append(removed_item)
                             
                             # Keep the remaining tacos
                             remaining = item.copy()
-                            remaining["quantity"] = item["quantity"] - tacos_needed
+                            remaining["quantity"] = item["quantity"] - tacos_to_remove
                             remaining["total"] = round(remaining["price"] * remaining["quantity"], 2)
                             items_to_keep.append(remaining)
-                            tacos_needed = 0
+                            tacos_to_remove = 0
                     # Remove chips & salsa
-                    elif "chips" in item_lower and "salsa" in item_lower and not has_chips:
-                        removed_items.append(item)
-                        has_chips = True
-                    # Remove small drink
-                    elif ("small" in item_lower and "drink" in item_lower) and not has_drink:
-                        removed_items.append(item)
-                        has_drink = True
+                    elif "chips" in item_lower and "salsa" in item_lower and chips_to_remove > 0:
+                        if item["quantity"] <= chips_to_remove:
+                            removed_items.append(item)
+                            chips_to_remove -= item["quantity"]
+                        else:
+                            removed_item = item.copy()
+                            removed_item["quantity"] = chips_to_remove
+                            removed_item["total"] = round(removed_item["price"] * chips_to_remove, 2)
+                            removed_items.append(removed_item)
+                            
+                            remaining = item.copy()
+                            remaining["quantity"] = item["quantity"] - chips_to_remove
+                            remaining["total"] = round(remaining["price"] * remaining["quantity"], 2)
+                            items_to_keep.append(remaining)
+                            chips_to_remove = 0
+                    # Remove small drinks
+                    elif "small" in item_lower and "drink" in item_lower and drinks_to_remove > 0:
+                        if item["quantity"] <= drinks_to_remove:
+                            removed_items.append(item)
+                            drinks_to_remove -= item["quantity"]
+                        else:
+                            removed_item = item.copy()
+                            removed_item["quantity"] = drinks_to_remove
+                            removed_item["total"] = round(removed_item["price"] * drinks_to_remove, 2)
+                            removed_items.append(removed_item)
+                            
+                            remaining = item.copy()
+                            remaining["quantity"] = item["quantity"] - drinks_to_remove
+                            remaining["total"] = round(remaining["price"] * remaining["quantity"], 2)
+                            items_to_keep.append(remaining)
+                            drinks_to_remove = 0
                     else:
                         items_to_keep.append(item)
                 
-                # Add Taco Combo
+                # Add Taco Combo(s)
                 combo = {
                     "sku": "C001",
                     "name": "Taco Combo",
                     "description": "2 tacos (your choice) + chips & salsa + small drink",
                     "price": 9.99,
-                    "quantity": 1,
-                    "total": 9.99
+                    "quantity": max_combos,
+                    "total": round(9.99 * max_combos, 2)
                 }
                 
             elif combo_type == "burrito":
-                # Remove 1 burrito, chips & salsa, and small drink for Burrito Combo
-                burritos_needed = 1
-                has_chips = False
-                has_drink = False
+                # Calculate how many burrito combos we can make
+                # Need: 1 burrito, 1 chips & salsa, 1 small drink per combo
+                burrito_count = sum(item["quantity"] for item in order_state["items"] if "burrito" in item["name"].lower())
+                chips_count = sum(item["quantity"] for item in order_state["items"] if "chips" in item["name"].lower() and "salsa" in item["name"].lower())
+                drink_count = sum(item["quantity"] for item in order_state["items"] if "small" in item["name"].lower() and "drink" in item["name"].lower())
                 
+                # Maximum combos we can make
+                max_combos = min(burrito_count, chips_count, drink_count)
+                
+                if max_combos <= 0:
+                    return SwaigFunctionResult("You don't have enough items for a Burrito Combo. You need a burrito, chips & salsa, and a small drink.")
+                
+                # Track how many of each item we need to remove
+                burritos_to_remove = max_combos
+                chips_to_remove = max_combos
+                drinks_to_remove = max_combos
+                
+                # Process each item
                 for item in order_state["items"]:
                     item_lower = item["name"].lower()
                     
-                    # Remove 1 burrito
-                    if "burrito" in item_lower and burritos_needed > 0:
-                        if item["quantity"] <= burritos_needed:
-                            # Remove all of this item
+                    # Remove burritos
+                    if "burrito" in item_lower and burritos_to_remove > 0:
+                        if item["quantity"] <= burritos_to_remove:
                             removed_items.append(item)
-                            burritos_needed -= item["quantity"]
+                            burritos_to_remove -= item["quantity"]
                         else:
                             # Remove only what we need, keep the rest
                             removed_item = item.copy()
-                            removed_item["quantity"] = burritos_needed
-                            removed_item["total"] = round(removed_item["price"] * burritos_needed, 2)
+                            removed_item["quantity"] = burritos_to_remove
+                            removed_item["total"] = round(removed_item["price"] * burritos_to_remove, 2)
                             removed_items.append(removed_item)
                             
                             # Keep the remaining burritos
                             remaining = item.copy()
-                            remaining["quantity"] = item["quantity"] - burritos_needed
+                            remaining["quantity"] = item["quantity"] - burritos_to_remove
                             remaining["total"] = round(remaining["price"] * remaining["quantity"], 2)
                             items_to_keep.append(remaining)
-                            burritos_needed = 0
+                            burritos_to_remove = 0
                     # Remove chips & salsa
-                    elif "chips" in item_lower and "salsa" in item_lower and not has_chips:
-                        removed_items.append(item)
-                        has_chips = True
-                    # Remove small drink
-                    elif ("small" in item_lower and "drink" in item_lower) and not has_drink:
-                        removed_items.append(item)
-                        has_drink = True
+                    elif "chips" in item_lower and "salsa" in item_lower and chips_to_remove > 0:
+                        if item["quantity"] <= chips_to_remove:
+                            removed_items.append(item)
+                            chips_to_remove -= item["quantity"]
+                        else:
+                            removed_item = item.copy()
+                            removed_item["quantity"] = chips_to_remove
+                            removed_item["total"] = round(removed_item["price"] * chips_to_remove, 2)
+                            removed_items.append(removed_item)
+                            
+                            remaining = item.copy()
+                            remaining["quantity"] = item["quantity"] - chips_to_remove
+                            remaining["total"] = round(remaining["price"] * remaining["quantity"], 2)
+                            items_to_keep.append(remaining)
+                            chips_to_remove = 0
+                    # Remove small drinks
+                    elif "small" in item_lower and "drink" in item_lower and drinks_to_remove > 0:
+                        if item["quantity"] <= drinks_to_remove:
+                            removed_items.append(item)
+                            drinks_to_remove -= item["quantity"]
+                        else:
+                            removed_item = item.copy()
+                            removed_item["quantity"] = drinks_to_remove
+                            removed_item["total"] = round(removed_item["price"] * drinks_to_remove, 2)
+                            removed_items.append(removed_item)
+                            
+                            remaining = item.copy()
+                            remaining["quantity"] = item["quantity"] - drinks_to_remove
+                            remaining["total"] = round(remaining["price"] * remaining["quantity"], 2)
+                            items_to_keep.append(remaining)
+                            drinks_to_remove = 0
                     else:
                         items_to_keep.append(item)
                 
-                # Add Burrito Combo
+                # Add Burrito Combo(s)
                 combo = {
                     "sku": "C002",
                     "name": "Burrito Combo",
                     "description": "Any burrito + chips & salsa + small drink",
                     "price": 12.99,
-                    "quantity": 1,
-                    "total": 12.99
+                    "quantity": max_combos,
+                    "total": round(12.99 * max_combos, 2)
                 }
             else:
                 return SwaigFunctionResult("I can only upgrade to taco or burrito combos.")
@@ -1425,11 +1510,16 @@ class HolyGuacamoleAgent(AgentBase):
             order_state["item_count"] = sum(item["quantity"] for item in order_state["items"])
             
             # Build response
-            if savings > 0:
-                response = f"Great choice! I've upgraded your order to the {combo['name']} and saved you {dollars_to_words(savings)}!"
+            if combo["quantity"] > 1:
+                combo_text = f"{combo['quantity']} {combo['name']}s"
             else:
-                response = f"I've upgraded your order to the {combo['name']}."
-            response += f" Your new total is ${order_state['total']:.2f}."
+                combo_text = f"the {combo['name']}"
+            
+            if savings > 0:
+                response = f"Great choice! I've upgraded your order to {combo_text} and saved you {dollars_to_words(savings)}!"
+            else:
+                response = f"I've upgraded your order to {combo_text}."
+            response += f" Your new total is {dollars_to_words(order_state['total'])}."
             
             result = SwaigFunctionResult(response)
             save_order_state(result, order_state, global_data)
