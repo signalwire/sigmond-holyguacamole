@@ -519,7 +519,7 @@ class HolyGuacamoleAgent(AgentBase):
         # Core ordering functions
         @self.tool(
             name="add_item",
-            wait_file="/keyspressing.wav",
+            wait_file="/keyspressing.mp3",
             description="Add an item to the order",
             parameters={
                 "type": "object",
@@ -675,7 +675,7 @@ class HolyGuacamoleAgent(AgentBase):
         
         @self.tool(
             name="remove_item",
-            wait_file="/keyspressing.wav",
+            wait_file="/keyspressing.mp3",
             description="Remove an item from the order",
             parameters={
                 "type": "object",
@@ -819,7 +819,7 @@ class HolyGuacamoleAgent(AgentBase):
         
         @self.tool(
             name="modify_quantity",
-            wait_file="/keyspressing.wav",
+            wait_file="/keyspressing.mp3",
             description="Change the quantity of an item already in the order",
             parameters={
                 "type": "object",
@@ -915,7 +915,7 @@ class HolyGuacamoleAgent(AgentBase):
         
         @self.tool(
             name="review_order",
-            wait_file="/keyspressing.wav",
+            wait_file="/keyspressing.mp3",
             description="Review the current order",
             parameters={
                 "type": "object",
@@ -948,7 +948,7 @@ class HolyGuacamoleAgent(AgentBase):
         
         @self.tool(
             name="finalize_order",
-            wait_file="/keyspressing.wav",
+            wait_file="/keyspressing.mp3",
             description="Finalize order and move to confirmation",
             parameters={
                 "type": "object",
@@ -986,7 +986,7 @@ class HolyGuacamoleAgent(AgentBase):
         
         @self.tool(
             name="process_payment",
-            wait_file="/keyspressing.wav",
+            wait_file="/keyspressing.mp3",
             description="Process the payment",
             parameters={
                 "type": "object",
@@ -1022,7 +1022,7 @@ class HolyGuacamoleAgent(AgentBase):
         
         @self.tool(
             name="complete_order",
-            wait_file="/keyspressing.wav",
+            wait_file="/keyspressing.mp3",
             description="Complete the order",
             parameters={
                 "type": "object",
@@ -1063,7 +1063,7 @@ class HolyGuacamoleAgent(AgentBase):
         
         @self.tool(
             name="cancel_order",
-            wait_file="/keyspressing.wav",
+            wait_file="/keyspressing.mp3",
             description="Clear/cancel the entire order. Use when customer says 'cancel', 'start over', 'never mind', or before adding a single item when they say 'I only want X'",
             parameters={
                 "type": "object",
@@ -1113,7 +1113,7 @@ class HolyGuacamoleAgent(AgentBase):
         
         @self.tool(
             name="new_order",
-            wait_file="/keyspressing.wav",
+            wait_file="/keyspressing.mp3",
             description="Start a new order",
             parameters={
                 "type": "object",
@@ -1150,7 +1150,7 @@ class HolyGuacamoleAgent(AgentBase):
         
         @self.tool(
             name="upgrade_to_combo",
-            wait_file="/keyspressing.wav",
+            wait_file="/keyspressing.mp3",
             description="Upgrade individual items to a combo meal",
             parameters={
                 "type": "object",
