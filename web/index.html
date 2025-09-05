@@ -159,6 +159,7 @@
             border-radius: 15px;
             width: 100%;
             max-width: 810px;
+            max-height: 540px; /* Maximum height to maintain ratio */
             aspect-ratio: 1620 / 1080;  /* Maintains exact aspect ratio */
             display: flex;
             align-items: center;
@@ -521,6 +522,7 @@
             #video-container {
                 order: 1;
                 margin-bottom: 20px;
+                max-height: 60vh; /* Limit video height on mobile */
             }
             
             #status {
@@ -541,10 +543,16 @@
             
             #menu-card {
                 order: 6;
+                width: 100%; /* Full width on mobile */
             }
             
             #event-log-container {
                 order: 7;
+            }
+            
+            /* Make all cards full width on mobile */
+            .card {
+                width: 100%;
             }
             
         }
