@@ -612,6 +612,7 @@ class HolyGuacamoleAgent(AgentBase):
                 new_item = {
                     "sku": sku,
                     "name": item_data["name"],
+                    "description": item_data.get("description", ""),
                     "price": item_data["price"],
                     "quantity": quantity,
                     "total": round(item_data["price"] * quantity, 2)
