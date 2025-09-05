@@ -901,9 +901,10 @@ class HolyGuacamoleAgent(AgentBase):
             
             # Send event to UI
             result.swml_user_event({
-                "type": "quantity_changed",
+                "type": "quantity_modified",
                 "sku": modified_item.get("sku"),
                 "new_quantity": new_quantity if new_quantity > 0 else 0,
+                "new_total": modified_item["total"] if modified_item and new_quantity > 0 else 0,
                 "order_total": order_state["total"],
                 "subtotal": order_state["subtotal"],
                 "tax": order_state["tax"],
