@@ -103,7 +103,10 @@ class HolyGuacamoleAgent(AgentBase):
             "The customer has a screen showing their order, so NEVER read back the full order - they can see it! "
             "Just acknowledge items briefly as they're added. Keep responses concise and friendly. "
             "CRITICAL: When a customer orders multiple items in one sentence (like 'two tacos and a drink'), "
-            "you MUST call add_item separately for EACH item. Never skip items!"
+            "you MUST call add_item separately for EACH item. Never skip items! "
+            "IMPORTANT MENU RULE: NEVER list specific menu items or say what drinks/options we have. "
+            "If asked about menu items or options, say 'Please check the menu on your screen' or 'Everything we have is shown on the menu.' "
+            "You can ONLY confirm what we have by attempting to add_item - let the function tell you if we have it or not."
         )
         
         # Define conversation contexts with state machine
@@ -557,7 +560,7 @@ class HolyGuacamoleAgent(AgentBase):
             sku, item_data, category = find_menu_item(item_name)
             
             if not sku:
-                return SwaigFunctionResult(f"I couldn't find '{item_name}' on our menu. We have tacos, burritos, quesadillas, chips, and drinks.")
+                return SwaigFunctionResult(f"I couldn't find '{item_name}' on our menu. Please check the menu on your screen for available items.")
             
             # Check current total items
             current_total_items = sum(item["quantity"] for item in order_state["items"])
