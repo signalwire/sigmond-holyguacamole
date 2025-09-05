@@ -90,26 +90,55 @@
         }
 
         #video-container {
-            background: #333;
+            background: linear-gradient(135deg, #FFF8DC 0%, #FFEAA7 30%, #FFD700 100%);
             border-radius: 15px;
-            min-height: 400px;
+            /* 1620×1080 = 3:2 aspect ratio */
+            aspect-ratio: 1620 / 1080;
+            width: 100%;
+            max-width: 810px; /* Half of 1620 for reasonable display size */
+            margin: 0 auto;
             display: flex;
             align-items: center;
             justify-content: center;
             position: relative;
             overflow: hidden;
         }
+        
+        #video-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            text-align: center;
+        }
 
         /* Style any video element SignalWire injects */
-        #video-container video {
+        #video-container video,
+        #video-container > div > video {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: cover; /* Changed to cover to fill the container */
             border-radius: 15px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 2;
+            background: #000;
+        }
+        
+        /* SignalWire may inject wrapper divs */
+        #video-container > div {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
         
         /* Hide local video if present */
-        #video-container video[id*="local"] {
+        #video-container video[id*="local"],
+        #video-container video.localVideo {
             display: none;
         }
 
@@ -236,37 +265,79 @@
             color: #333;
         }
 
+        /* Two-column layout for menu categories */
+        #menu-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .menu-category {
+            background: #FFF8DC;
+            border-radius: 8px;
+            padding: 8px;
+        }
+        
+        .menu-category-title {
+            font-weight: bold;
+            color: #C1272D;
+            font-size: 1rem;
+            margin-bottom: 5px;
+            padding-bottom: 3px;
+            border-bottom: 1px solid #FFD700;
+        }
+
         .menu-section {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 10px;
-            margin-top: 10px;
+            grid-template-columns: 1fr;
+            gap: 2px;
+            margin-top: 3px;
         }
 
         .menu-item {
-            padding: 10px;
-            background: #FFF8DC;
-            border-radius: 8px;
-            text-align: center;
-            border: 2px solid transparent;
-            transition: all 0.3s;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 4px 8px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #E5E5E5;
+            transition: all 0.2s;
+            margin-bottom: 2px;
         }
 
         .menu-item:hover {
             border-color: #568203;
-            transform: scale(1.05);
+            background: #F9FFF5;
+            transform: translateX(3px);
         }
 
         .menu-item-name {
             font-weight: 600;
             color: #333;
-            margin-bottom: 5px;
+            font-size: 0.85rem;
+            margin-bottom: 1px;
+        }
+        
+        .menu-item-desc {
+            color: #666;
+            font-size: 0.7rem;
+            line-height: 1.1;
         }
 
         .menu-item-price {
             color: #568203;
-            font-size: 1.1rem;
-            font-weight: bold;
+            font-weight: 700;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            margin-left: 8px;
+        }
+        
+        /* Responsive: single column on small screens */
+        @media (max-width: 768px) {
+            #menu-display {
+                grid-template-columns: 1fr;
+            }
         }
 
         #result-message {
@@ -356,8 +427,9 @@
             <div class="card">
                 <div id="video-container">
                     <!-- SignalWire SDK will inject video elements here -->
-                    <div id="video-placeholder" style="color: #FFD700; font-size: 1.2rem; text-align: center;">
-                        🎥 Video will appear when connected
+                    <div id="video-placeholder">
+                        <img src="/logo.png" alt="Holy Guacamole Logo" style="max-width: 200px; opacity: 0.7;">
+                        <p style="color: #568203; margin-top: 20px; font-size: 1.1rem;">Click "Start Ordering" to begin</p>
                     </div>
                 </div>
             </div>
@@ -437,8 +509,8 @@
     <!-- Result Message Overlay -->
     <div id="result-message"></div>
 
-    <!-- SignalWire SDK -->
-    <script src="/signalwire.js"></script>
+    <!-- SignalWire SDK from CDN -->
+    <script src="https://cdn.signalwire.com/@signalwire/js"></script>
     <!-- App Logic -->
     <script src="/app.js"></script>
 </body>

@@ -30,7 +30,7 @@ async function loadMenu() {
     }
 }
 
-// Display menu in compact table format
+// Display menu in two-column layout
 function displayMenu(menu) {
     const menuContainer = document.getElementById('menu-display');
     if (!menuContainer) {
@@ -39,7 +39,6 @@ function displayMenu(menu) {
     }
     
     menuContainer.innerHTML = '';
-    menuContainer.style.padding = '10px';
     
     // Define category order and icons
     const categoryOrder = ['tacos', 'burritos', 'quesadillas', 'sides', 'drinks', 'combos'];
@@ -52,38 +51,54 @@ function displayMenu(menu) {
         combos: '💰'
     };
     
-    // Display each category as a compact table
+    // Display each category in the two-column grid
     categoryOrder.forEach(category => {
         if (!menu[category]) return;
         
         const categoryDiv = document.createElement('div');
-        categoryDiv.style.marginBottom = '15px';
+        categoryDiv.className = 'menu-category';
         
         // Category header
-        const header = document.createElement('h4');
-        header.style.cssText = 'color: #C1272D; border-bottom: 1px solid #FFD700; padding-bottom: 3px; margin-bottom: 8px; font-size: 1rem;';
+        const header = document.createElement('div');
+        header.className = 'menu-category-title';
         header.textContent = `${categoryIcons[category] || ''} ${category.charAt(0).toUpperCase() + category.slice(1)}`;
         categoryDiv.appendChild(header);
         
-        // Create table
-        const table = document.createElement('table');
-        table.style.cssText = 'width: 100%; border-collapse: collapse; font-size: 0.9rem;';
+        // Menu items section
+        const itemsSection = document.createElement('div');
+        itemsSection.className = 'menu-section';
         
-        // Add items as table rows
+        // Add items
         Object.entries(menu[category]).forEach(([sku, item]) => {
-            const row = document.createElement('tr');
-            row.style.cssText = 'border-bottom: 1px solid #f0f0f0;';
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'menu-item';
             
-            row.innerHTML = `
-                <td style="padding: 4px 8px; font-weight: 600; color: #333; width: 25%;">${item.name}</td>
-                <td style="padding: 4px 8px; color: #666; font-size: 0.75rem;">${item.description || ''}</td>
-                <td style="padding: 4px 8px; color: #568203; font-weight: bold; text-align: right; width: 15%;">$${item.price.toFixed(2)}</td>
-            `;
+            const leftDiv = document.createElement('div');
+            leftDiv.style.flex = '1';
             
-            table.appendChild(row);
+            const nameSpan = document.createElement('div');
+            nameSpan.className = 'menu-item-name';
+            nameSpan.textContent = item.name;
+            
+            const descSpan = document.createElement('div');
+            descSpan.className = 'menu-item-desc';
+            descSpan.textContent = item.description || '';
+            
+            leftDiv.appendChild(nameSpan);
+            if (item.description) {
+                leftDiv.appendChild(descSpan);
+            }
+            
+            const priceSpan = document.createElement('span');
+            priceSpan.className = 'menu-item-price';
+            priceSpan.textContent = `$${item.price.toFixed(2)}`;
+            
+            itemDiv.appendChild(leftDiv);
+            itemDiv.appendChild(priceSpan);
+            itemsSection.appendChild(itemDiv);
         });
         
-        categoryDiv.appendChild(table);
+        categoryDiv.appendChild(itemsSection);
         menuContainer.appendChild(categoryDiv);
     });
 }
@@ -467,53 +482,37 @@ async function connect() {
             throw new Error('Please update STATIC_TOKEN with your actual SignalWire token');
         }
         
-        // Use the Fabric API like blackjack does
-        const SignalWireSDK = window.SignalWire || SignalWire;
-        
-        if (typeof SignalWireSDK.Fabric === 'function') {
-            client = await SignalWireSDK.Fabric({
+        // Initialize SignalWire client from CDN
+        // The CDN exports SignalWire.SignalWire as the main function
+        if (window.SignalWire && typeof window.SignalWire.SignalWire === 'function') {
+            console.log('Initializing SignalWire client...');
+            client = await window.SignalWire.SignalWire({
                 token: STATIC_TOKEN,
-                logLevel: 'debug',
-                debug: { logWsTraffic: false }
-            });
-        } else if (typeof SignalWireSDK.SignalWire === 'function') {
-            client = await SignalWireSDK.SignalWire({
-                token: STATIC_TOKEN,
-                logLevel: 'debug',
-                debug: { logWsTraffic: false }
+                logLevel: 'debug'
             });
         } else {
-            throw new Error('SignalWire SDK not found or not a function');
+            console.error('SignalWire SDK structure:', window.SignalWire);
+            throw new Error('SignalWire.SignalWire function not found');
         }
         
         console.log('Client initialized successfully');
         
-        // Subscribe to user events
+        // Subscribe to user events at client level
         client.on('user_event', (params) => {
             console.log('🌮 CLIENT EVENT: user_event', params);
             handleUserEvent(params);
         });
         
-        client.on('calling.user_event', (params) => {
-            console.log('🌯 CLIENT EVENT: calling.user_event', params);
-            handleUserEvent(params);
-        });
+        // Get video container for remote video
+        const videoContainer = document.getElementById('video-container');
         
-        client.on('signalwire.event', (params) => {
-            console.log('🥑 CLIENT EVENT: signalwire.event', params);
-            if (params.event_type === 'user_event') {
-                console.log('✅ Found user_event in signalwire.event!', params.params);
-                handleUserEvent(params.params || params);
-            }
-        });
-        
-        // Dial the call
+        // Dial the call with video negotiation
         roomSession = await client.dial({
             to: DESTINATION,
-            rootElement: document.getElementById('video-container'),
+            rootElement: videoContainer,
             audio: true,
             video: true,
-            negotiateVideo: true,
+            negotiateVideo: true,  // Important for video negotiation
             userVariables: {
                 userName: 'Holy Guacamole Customer',
                 interface: 'web-ui',
@@ -522,22 +521,10 @@ async function connect() {
             }
         });
         
-        console.log('Dial initiated');
-        
-        // Try to catch verto bye events
-        if (roomSession._rtcPeer || roomSession._peer) {
-            const peer = roomSession._rtcPeer || roomSession._peer;
-            if (peer && peer.on) {
-                peer.on('bye', () => {
-                    console.log('Verto BYE received - remote hangup');
-                    updateStatus('greeting', 'Call ended. Thank you!');
-                    disconnect();
-                });
-            }
-        }
+        console.log('Room session created:', roomSession);
         
         // Subscribe to room session events
-        roomSession.on('call.joined', (params) => {
+        roomSession.on('call.joined', async (params) => {
             console.log('Call joined:', params);
             connectBtn.style.display = 'none';
             hangupBtn.style.display = 'inline-block';
@@ -550,6 +537,24 @@ async function connect() {
             if (placeholder) {
                 placeholder.style.display = 'none';
             }
+            
+            // Log local stream info if available
+            if (roomSession.localStream) {
+                console.log('Local stream available:', roomSession.localStream);
+                const videoTracks = roomSession.localStream.getVideoTracks();
+                const audioTracks = roomSession.localStream.getAudioTracks();
+                console.log(`Local stream: ${videoTracks.length} video tracks, ${audioTracks.length} audio tracks`);
+            }
+            
+            // Check video elements after a short delay
+            setTimeout(() => {
+                const videoContainer = document.getElementById('video-container');
+                const videos = videoContainer.querySelectorAll('video');
+                console.log('Video elements in container:', videos.length);
+                videos.forEach((video, index) => {
+                    console.log(`Video ${index}:`, video, 'Has stream:', !!video.srcObject);
+                });
+            }, 1000);
             
             logEvent('Connected to Sigmond');
         });
@@ -594,8 +599,11 @@ async function connect() {
             }, 100);
         };
         
+        // Listen for various disconnect events
+        roomSession.on('destroy', (params) => handleDisconnectEvent('destroy', params));
         roomSession.on('disconnected', (params) => handleDisconnectEvent('disconnected', params));
         roomSession.on('room.left', (params) => handleDisconnectEvent('room.left', params));
+        roomSession.on('call.ended', (params) => handleDisconnectEvent('call.ended', params));
         
         // Handle member left - but only if it's the remote party
         roomSession.on('member.left', (params) => {
@@ -612,10 +620,22 @@ async function connect() {
             handleUserEvent(params);
         });
         
-        // Start the call
-        await roomSession.start();
+        // Additional events for debugging
+        roomSession.on('room.started', (params) => {
+            console.log('Room started:', params);
+        });
         
-        console.log('Call started');
+        roomSession.on('stream.started', (params) => {
+            console.log('Stream started:', params);
+        });
+        
+        roomSession.on('stream.ended', (params) => {
+            console.log('Stream ended:', params);
+        });
+        
+        // START THE CALL - Critical!
+        await roomSession.start();
+        console.log('Call started successfully');
         
     } catch (error) {
         console.error('Connection error:', error);
@@ -625,33 +645,54 @@ async function connect() {
     }
 }
 
-// Disconnect
+// Disconnect and cleanup
 function disconnect() {
     console.log('Disconnect called - cleaning up...');
     
-    // Check if already disconnected
-    if (!roomSession) {
-        console.log('Already disconnected, just ensuring UI is reset');
+    // Clean up local stream if it exists
+    if (roomSession && roomSession.localStream) {
+        console.log('Stopping local stream tracks');
+        roomSession.localStream.getTracks().forEach(track => {
+            track.stop();
+        });
     }
     
-    // Clear the room session
+    // Clean up room session
     roomSession = null;
     
-    // Don't disconnect the client - it can be reused
-    // client = null;
+    // Disconnect the client properly
+    if (client) {
+        try {
+            console.log('Disconnecting client');
+            client.disconnect();
+        } catch (e) {
+            console.log('Client disconnect error:', e);
+        }
+        client = null;
+    }
     
     // Clean up video container
     const videoContainer = document.getElementById('video-container');
     if (videoContainer) {
         console.log('Cleaning video container');
-        while (videoContainer.firstChild) {
-            videoContainer.removeChild(videoContainer.firstChild);
-        }
-        // Add a placeholder back
+        
+        // Stop any video streams in the container
+        const videos = videoContainer.querySelectorAll('video');
+        videos.forEach(video => {
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+            }
+        });
+        
+        // Clear and restore placeholder
+        videoContainer.innerHTML = '';
         const placeholder = document.createElement('div');
         placeholder.id = 'video-placeholder';
-        placeholder.style.cssText = 'color: #FFD700; font-size: 1.2rem; text-align: center;';
-        placeholder.textContent = '🎥 Video will appear when connected';
+        placeholder.innerHTML = `
+            <img src="/logo.png" alt="Holy Guacamole Logo" style="max-width: 200px; opacity: 0.7;">
+            <p style="color: #568203; margin-top: 20px; font-size: 1.1rem;">Click "Start Ordering" to begin</p>
+        `;
         videoContainer.appendChild(placeholder);
     }
     
@@ -744,20 +785,18 @@ function toggleMute() {
 
 // Hangup function
 async function hangup() {
-    if (roomSession) {
-        try {
-            // Check if the call is still active before trying to hangup
-            if (roomSession.state && roomSession.state !== 'ended' && roomSession.state !== 'ending') {
-                console.log('Hanging up active call...');
-                await roomSession.hangup();
-            } else {
-                console.log('Call already ended, just cleaning up');
-            }
-        } catch (e) {
-            // Ignore hangup errors - the call might already be ended
-            console.log('Hangup error (expected if call already ended):', e.message);
+    try {
+        if (roomSession) {
+            console.log('Hanging up call...');
+            await roomSession.hangup();
+            console.log('Call hung up successfully');
         }
+    } catch (error) {
+        console.error('Hangup error:', error);
+        // Continue with disconnect even if hangup fails
     }
+    
+    // Always disconnect to clean up
     disconnect();
 }
 
@@ -785,4 +824,11 @@ document.addEventListener('DOMContentLoaded', () => {
     loadMenu();
     updateStatus('greeting', 'Welcome to Holy Guacamole!');
     logEvent('Application initialized');
+});
+
+// Handle page unload
+window.addEventListener('beforeunload', () => {
+    if (roomSession) {
+        hangup();
+    }
 });

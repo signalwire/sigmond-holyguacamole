@@ -236,6 +236,18 @@ class HolyGuacamoleAgent(AgentBase):
             total = round(subtotal + tax, 2)
             return subtotal, tax, total
         
+        def order_number_to_words(number):
+            """Convert order number to individual spoken digits (e.g., 401 -> 'four zero one')"""
+            digit_words = {
+                '0': 'zero', '1': 'one', '2': 'two', '3': 'three', '4': 'four',
+                '5': 'five', '6': 'six', '7': 'seven', '8': 'eight', '9': 'nine'
+            }
+            
+            # Convert number to string and spell out each digit
+            digits = str(number)
+            spoken_digits = [digit_words[d] for d in digits]
+            return ' '.join(spoken_digits)
+        
         def dollars_to_words(amount):
             """Convert dollar amount to spoken English"""
             # Handle zero
@@ -385,15 +397,19 @@ class HolyGuacamoleAgent(AgentBase):
                     print(f"[DEBUG] TF-IDF best match: {self.sku_map[best_idx][1]['name']} (score: {best_score:.3f})")
                     
                     # Return if similarity is high enough
-                    if best_score > 0.3:  # Threshold for accepting a match
+                    # Threshold set to 0.42 for better balance between accuracy and flexibility
+                    if best_score > 0.42:  # Threshold above 0.4 as requested
                         sku, item_data, category = self.sku_map[best_idx]
                         print(f"[DEBUG] TF-IDF match accepted: {item_data['name']} (SKU: {sku})")
                         return sku, item_data, category
                     else:
-                        print(f"[DEBUG] TF-IDF score too low ({best_score:.3f} < 0.3), falling back to fuzzy")
+                        print(f"[DEBUG] TF-IDF score too low ({best_score:.3f} < 0.42), no match found")
+                        # When TF-IDF is enabled, don't fall back to fuzzy matching
+                        return None, None, None
                 except Exception as e:
-                    # Fall back to fuzzy matching if TF-IDF fails
-                    print(f"[DEBUG] TF-IDF matching failed: {e}")
+                    # If TF-IDF fails due to error, also don't fall back
+                    print(f"[DEBUG] TF-IDF matching failed: {e}, no match found")
+                    return None, None, None
             
             # Fallback to fuzzy matching
             # Remove common words
@@ -970,7 +986,7 @@ class HolyGuacamoleAgent(AgentBase):
             # Generate order number
             order_state["order_number"] = random.randint(100, 999)
             
-            response = f"Perfect! Your order number is {order_state['order_number']}.\n"
+            response = f"Perfect! Your order number is {order_number_to_words(order_state['order_number'])}.\n"
             response += f"Your total is {dollars_to_words(order_state['total'])}.\n\n"
             response += "Please pull forward to the first window to pay."
             
@@ -1004,7 +1020,7 @@ class HolyGuacamoleAgent(AgentBase):
             
             order_number = order_state['order_number']
             
-            response = f"Thank you for your order! Order #{order_number} is complete.\n"
+            response = f"Thank you for your order! Order number {order_number_to_words(order_number)} is complete.\n"
             response += "Have a wonderful day!"
             
             # Clear the order but keep the order number
@@ -1644,22 +1660,14 @@ class HolyGuacamoleAgent(AgentBase):
 
 
 if __name__ == "__main__":
-    import sys
     import os
     
-    # Check if being run by swaig-test
-    if any('swaig-test' in arg for arg in sys.argv):
-        # Create agent instance for testing
-        agent = HolyGuacamoleAgent()
-        # This allows swaig-test to work with the agent
-        sys.modules['__main__'].agent = agent
-    else:
-        # Normal execution
-        agent = HolyGuacamoleAgent()
-        
-        # Get port from environment variable (for Dokku) or use 5000 as default
-        port = int(os.environ.get('PORT', 5000))
-        host = os.environ.get('HOST', '0.0.0.0')
-        
-        print(f"Starting server on {host}:{port}")
-        agent.serve(host=host, port=port)
+    # Create agent instance
+    agent = HolyGuacamoleAgent()
+    
+    # Get port from environment variable (for Dokku) or use 5000 as default
+    port = int(os.environ.get('PORT', 5000))
+    host = os.environ.get('HOST', '0.0.0.0')
+    
+    print(f"Starting server on {host}:{port}")
+    agent.serve(host=host, port=port)
