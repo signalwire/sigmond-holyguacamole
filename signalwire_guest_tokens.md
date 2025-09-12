@@ -36,6 +36,12 @@ Authorization: Basic {base64_encoded_credentials}
 
 #### Example Request
 
+Note: Allowed addresses are found in your SignalWire dashboard subscribers settings in the "My Resources" section of the left side menu.
+
+ <img src="https://github.com/user-attachments/assets/74382260-f00d-47b2-bb07-ca437cd8375d" alt="your-image-description" width="500"/>
+
+
+
 ```json
 {
   "allowed_addresses": [
