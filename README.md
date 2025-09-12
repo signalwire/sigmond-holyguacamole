@@ -11,12 +11,13 @@ An advanced implementation of a voice-controlled drive-thru ordering system usin
 ## Table of Contents
 1. [Overview](#overview)
 2. [Architecture Deep Dive](#architecture-deep-dive)
-3. [Implementation Walkthrough](#implementation-walkthrough)
-4. [State Machine Design](#state-machine-design)
-5. [SWAIG Functions](#swaig-functions)
-6. [Frontend Integration](#frontend-integration)
-7. [Deployment](#deployment)
-8. [Advanced Features](#advanced-features)
+3. [SignalWire Guest Tokens API](#signalwire-guest-tokens.md)
+4. [Implementation Walkthrough](#implementation-walkthrough)
+5. [State Machine Design](#state-machine-design)
+6. [SWAIG Functions](#swaig-functions)
+7. [Frontend Integration](#frontend-integration)
+8. [Deployment](#deployment)
+9. [Advanced Features](#advanced-features)
 
 ## Overview
 
