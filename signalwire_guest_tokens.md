@@ -34,11 +34,31 @@ Authorization: Basic {base64_encoded_credentials}
 | `allowed_addresses` | `array[string]` | **Yes** | List of UUIDs representing the allowed Fabric addresses | Maximum 10 UUIDs |
 | `expire_at` | `string` | No | Expiration date and time of the token in ISO 8601 format | Must be a valid datetime |
 
+How to generate `expire_at` This example will generate a token that will expire in 1 year
+
+Linux:
+```
+date -d '+1 year' +%s
+```
+
+On macOS/BSD:
+```
+date -v+1y +%s
+```
+
+In Python (cross-platform):
+```
+import time
+import datetime
+expire_at = int((datetime.datetime.utcnow() + datetime.timedelta(days=365)).timestamp())
+print(expire_at)
+```
+
 #### Example Request
 
 Note: Allowed addresses are found in your SignalWire dashboard subscribers settings in the "My Resources" section of the left side menu.
 
- <img src="https://github.com/user-attachments/assets/74382260-f00d-47b2-bb07-ca437cd8375d" alt="your-image-description" width="500"/>
+ <img src="https://github.com/user-attachments/assets/c5a6a188-d7f7-42af-901c-143e85b069aa" alt="your-image-description" width="500"/>
 
 
 
