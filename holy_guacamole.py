@@ -95,7 +95,7 @@ class HolyGuacamoleAgent(AgentBase):
         if HAS_SKLEARN:
             self._initialize_tfidf()
         
-        # Set up Sigmond's personality
+
         self.prompt_add_section(
             "Personality",
             "You are Sigmond, the friendly order-taker at Holy Guacamole! Mexican drive-thru. "
@@ -1559,7 +1559,13 @@ class HolyGuacamoleAgent(AgentBase):
         
         # Set conversation parameters (video URLs will be set dynamically)
         self.set_param("end_of_speech_timeout", 1300)
-        
+
+        # Optional post-prompt URL from environment
+        post_prompt_url = os.environ.get("GUACAMOLE_POST_PROMPT_URL")
+        if post_prompt_url:
+            self.set_post_prompt("Summarize the conversation, including all the details about the food order and any special requests.")
+            self.set_post_prompt_url(post_prompt_url)
+
         # Initialize global data
         self.set_global_data({
             "restaurant": "Holy Guacamole!",
