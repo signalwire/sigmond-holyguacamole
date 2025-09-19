@@ -11,7 +11,7 @@ An advanced implementation of a voice-controlled drive-thru ordering system usin
 ## Table of Contents
 1. [Overview](#overview)
 2. [Architecture Deep Dive](#architecture-deep-dive)
-3. [SignalWire Guest Tokens API](#signalwire-guest-tokens.md)
+3. [SignalWire Guest Tokens API](../signalwire_guest_tokens.md)
 4. [Implementation Walkthrough](#implementation-walkthrough)
 5. [State Machine Design](#state-machine-design)
 6. [SWAIG Functions](#swaig-functions)
