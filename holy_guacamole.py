@@ -1543,7 +1543,7 @@ class HolyGuacamoleAgent(AgentBase):
         self.add_language(
             name="English",
             code="en-US",
-            voice="amazon.matthew"
+            voice="elevenlabs.adam"
         )
         
         # Add speech hints
@@ -1602,7 +1602,6 @@ class HolyGuacamoleAgent(AgentBase):
             # Use set_param to set individual params instead of set_params to avoid clobbering
             self.set_param("video_idle_file", f"{base_url}/sigmond_cc_idle.mp4")
             self.set_param("video_talking_file", f"{base_url}/sigmond_cc_talking.mp4")
-            self.set_parma("ai_model", "nova-lite")
             print(f"Set video URLs to use host: {base_url}")
         else:
             # Fallback to default if no host header found
@@ -1780,7 +1779,7 @@ if __name__ == "__main__":
     
     # Create agent instance
     agent = HolyGuacamoleAgent()
-
+    
     # Get port from environment variable (for Dokku) or use 5000 as default
     port = int(os.environ.get('PORT', 5000))
     host = os.environ.get('HOST', '0.0.0.0')
