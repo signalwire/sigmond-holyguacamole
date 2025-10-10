@@ -1558,7 +1558,13 @@ class HolyGuacamoleAgent(AgentBase):
         ])
         
         # Set conversation parameters (video URLs will be set dynamically)
-        self.set_param("end_of_speech_timeout", 1300)
+        self.set_param("end_of_speech_timeout", 700)
+
+        self.set_prompt_llm_params(
+            temperature=0.9,
+            top_p=0.9,
+            model="nova-micro"
+        )
 
         # Optional post-prompt URL from environment
         post_prompt_url = os.environ.get("GUACAMOLE_POST_PROMPT_URL")
