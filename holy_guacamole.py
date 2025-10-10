@@ -1561,9 +1561,9 @@ class HolyGuacamoleAgent(AgentBase):
         self.set_param("end_of_speech_timeout", 700)
 
         self.set_prompt_llm_params(
-            temperature=0.9,
-            top_p=0.9,
-            model="nova-lite"
+            temperature=0.1,
+            top_p=0.1,
+            model="gpt-4.1-nano"
         )
 
         # Optional post-prompt URL from environment
