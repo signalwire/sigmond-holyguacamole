@@ -1563,7 +1563,7 @@ class HolyGuacamoleAgent(AgentBase):
         self.set_prompt_llm_params(
             temperature=0.9,
             top_p=0.9,
-            model="nova-micro"
+            model="nova-lite"
         )
 
         # Optional post-prompt URL from environment
