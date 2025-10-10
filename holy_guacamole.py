@@ -1563,7 +1563,7 @@ class HolyGuacamoleAgent(AgentBase):
         self.set_prompt_llm_params(
             temperature=0.1,
             top_p=0.1,
-            model="gpt-4.1-nano"
+            model="gpt-4.1-mini"
         )
 
         # Optional post-prompt URL from environment
