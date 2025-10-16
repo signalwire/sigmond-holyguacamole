@@ -84,7 +84,8 @@ class HolyGuacamoleAgent(AgentBase):
     def __init__(self):
         super().__init__(
             name="Sigmond",
-            route="/swml"  # SWML endpoint path
+            route="/swml",  # SWML endpoint path
+            record_call=True
         )
         
         # Initialize TF-IDF vectorizer if available
