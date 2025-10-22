@@ -1564,7 +1564,7 @@ class HolyGuacamoleAgent(AgentBase):
         self.set_prompt_llm_params(
             temperature=0.1,
             top_p=0.1,
-            model="qwen3-4b-instruct-2507@brian"
+            model="llama-3.1-8b-instruct-turbo@together.ai"
         )
 
         # Optional post-prompt URL from environment
