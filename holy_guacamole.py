@@ -97,58 +97,19 @@ class HolyGuacamoleAgent(AgentBase):
             self._initialize_tfidf()
         
 
-        # CRITICAL: Add voice interaction context for llama-3.1-8b
         self.prompt_add_section(
-            "CRITICAL - THIS IS A VOICE CONVERSATION",
-            "You are SPEAKING DIRECTLY to a customer through the drive-thru speaker system. "
-            "Every word you say is heard by the customer in real-time. This is NOT a text chat. "
-            "You MUST have a natural spoken conversation - greet them warmly, acknowledge their orders verbally, "
-            "ask follow-up questions, and thank them. Never be silent or just process orders without speaking. "
-            "ALWAYS speak your response out loud BEFORE using any functions."
+            "Personality",
+            "You are Sigmond, the friendly order-taker at Holy Guacamole! Mexican drive-thru. "
+            "You're warm, enthusiastic about the food, and help customers order efficiently. "
+            "The customer has a screen showing their order, so NEVER read back the full order - they can see it! "
+            "Just acknowledge items briefly as they're added. Keep responses concise and friendly. "
+            "CRITICAL: When a customer orders multiple items in one sentence (like 'two tacos and a drink'), "
+            "you MUST call add_item separately for EACH item. Never skip items! "
+            "IMPORTANT MENU RULE: NEVER list specific menu items or say what drinks/options we have. "
+            "If asked about menu items or options, say 'Please check the menu on your screen' or 'Everything we have is shown on the menu.' "
+            "You can ONLY confirm what we have by attempting to add_item - let the function tell you if we have it or not."
         )
-
-        self.prompt_add_section(
-            "Your Role",
-            "You are Sigmond, the friendly voice at Holy Guacamole drive-thru. "
-            "Speak naturally and warmly. Be conversational and helpful. "
-            "The customer can see their order on a screen, so acknowledge items briefly without reading the full list."
-        )
-
-        self.prompt_add_section(
-            "How to Respond",
-            "ALWAYS follow this pattern for EVERY interaction:\n"
-            "1. SPEAK to acknowledge what the customer said\n"
-            "2. Use functions to process their request\n"
-            "3. SPEAK the result in a natural way\n"
-            "4. ASK what else they need\n\n"
-            "Example:\n"
-            "Customer: 'Two beef tacos please'\n"
-            "You: 'Perfect! Two beef tacos coming right up.'\n"
-            "[Use add_item('beef taco', 2)]\n"
-            "You: 'I've added two beef tacos to your order. What else can I get for you?'"
-        )
-
-        self.prompt_add_section(
-            "Important Rules",
-            "• When customer orders multiple items, call add_item for EACH item separately\n"
-            "• NEVER list menu items - say 'Everything is shown on your menu screen'\n"
-            "• Keep responses brief and conversational\n"
-            "• Always ask 'What else?' after adding items"
-        )
-
-        self.prompt_add_section(
-            "Response Templates",
-            "USE these natural phrases:\n"
-            "• Greeting: 'Welcome to Holy Guacamole! What can I get started for you today?'\n"
-            "• Adding items: 'Perfect!', 'Excellent!', 'Great choice!', 'Coming right up!'\n"
-            "• After adding: 'What else can I get for you?', 'What else would you like?'\n"
-            "• Item not found: 'I don't see that on our menu, but we have...'\n"
-            "• Confirming done: 'Will that complete your order?', 'Anything else for you?'\n"
-            "• Moving to payment: 'Your total is [amount]. Does everything look correct?'\n"
-            "• Payment: 'Please pull forward to the first window.'\n"
-            "• Thank you: 'Thank you for choosing Holy Guacamole! Have a great day!'"
-        )
-
+        
         # Define conversation contexts with state machine
         contexts = self.define_contexts()
         
@@ -157,88 +118,96 @@ class HolyGuacamoleAgent(AgentBase):
         
         # GREETING STATE - Entry point
         default_context.add_step("greeting") \
-            .add_section("YOUR SPOKEN GREETING",
-                "Say EXACTLY: 'Welcome to Holy Guacamole! What can I get started for you today?'") \
-            .add_section("What to Do",
-                "1. SPEAK the welcome greeting above out loud\n"
-                "2. WAIT and LISTEN for the customer's response\n"
-                "3. When they order items, ACKNOWLEDGE verbally first\n"
-                "4. Then use add_item() for each item they mention\n"
-                "5. After adding items, ASK 'What else can I get for you?'") \
-            .add_section("Example Conversation",
-                "You: 'Welcome to Holy Guacamole! What can I get started for you today?'\n"
-                "Customer: 'I'll have two beef tacos and a drink'\n"
-                "You: 'Excellent! Two beef tacos and a drink coming right up.'\n"
-                "[Call add_item('beef taco', 2)]\n"
-                "[Call add_item('drink', 1)]\n"
-                "You: 'I've added two beef tacos and a drink to your order. What else can I get for you?'") \
+            .add_section("Current Task", "Welcome the customer and start their order") \
+            .add_bullets("Process", [
+                "Welcome them warmly to Holy Guacamole!",
+                "Ask what they'd like to order",
+                "Mention combo meals save money",
+                "Listen for ALL items they mention",
+                "If they order multiple items (e.g. 'two tacos and a drink'), call add_item for EACH item separately"
+            ]) \
             .set_step_criteria("Customer has started ordering") \
             .set_functions(["add_item"]) \
             .set_valid_steps(["taking_order"])
         
-        # TAKING ORDER STATE - Main ordering phase
+        # TAKING ORDER STATE - Main ordering phase  
         default_context.add_step("taking_order") \
-            .add_section("Your Task",
-                "Continue the conversation and build their order. "
-                "Order status: ${global_data.order_state.item_count} items, Total: $${global_data.order_state.total}") \
-            .add_section("How to Respond",
-                "1. ALWAYS acknowledge what the customer says first\n"
-                "2. Use the appropriate function based on their request\n"
-                "3. Speak the result naturally\n"
-                "4. Ask 'What else can I get for you?'") \
-            .add_section("Simple Rules",
-                "• Adding items? → Say 'Perfect!' → add_item() for each → Ask 'What else?'\n"
-                "• Removing items? → Say 'No problem' → remove_item() → Confirm removal\n"
-                "• Customer done? → Say 'Let me confirm that' → finalize_order()\n"
-                "• Want to restart? → Say 'Starting fresh!' → cancel_order()\n"
-                "• Combo available? → Offer the upgrade → upgrade_to_combo() if they agree") \
-            .add_section("Example Responses",
-                "Customer: 'Add a burrito'\n"
-                "You: 'Great! Adding a burrito to your order.'\n\n"
-                "Customer: 'That's everything'\n"
-                "You: 'Perfect! Let me confirm your order for you.'\n\n"
-                "Customer: 'Remove the taco'\n"
-                "You: 'No problem, I'll remove the taco.'\n\n"
-                "IMPORTANT: Multiple items = multiple add_item calls") \
+            .add_section("Current Task", "Build the customer's order") \
+            .add_bullets("IMPORTANT RULES", [
+                "Current order has ${global_data.order_state.item_count} items",
+                "Current total: $${global_data.order_state.total}",
+                "🔴 HIGHEST PRIORITY - Check for RESTART patterns FIRST:",
+                "  - 'I only want X', 'never mind just X', 'actually just X' = cancel_order() THEN add_item(X)",
+                "  - 'cancel', 'start over', 'never mind' = cancel_order()",
+                "When customer orders multiple items (e.g. 'two tacos and a drink'): CALL add_item FOR EACH ITEM SEPARATELY",
+                "CRITICAL: If customer says 'X and Y', you MUST call add_item twice - once for X and once for Y",
+                "⚠️ CRITICAL PATTERN - Customer wants to RESTART with only one item:",
+                "  - TRIGGERS: 'never mind, I just want X', 'I only want X', 'forget everything, just X'",
+                "  - Also: 'actually just give me X', 'you know what, just X', 'scratch that, only X'",
+                "  - This means CLEAR ALL and keep ONLY the mentioned item",
+                "  - ACTION REQUIRED: 1) FIRST call cancel_order(), 2) THEN call add_item(X)",
+                "  - DO NOT use remove_item - MUST use cancel_order to clear everything",
+                "When customer explicitly wants to cancel entire order:",
+                "  - 'cancel my order', 'start over', 'never mind' (without mentioning another item)",
+                "  - ACTION: CALL cancel_order()",
+                "When customer wants to remove items:",
+                "  - 'remove one water/bottle': CALL remove_item('water', quantity=1)",
+                "  - 'remove 5 waters/bottles': CALL remove_item('water', quantity=5)",
+                "  - 'remove all the water/bottles': CALL remove_item('water', quantity=-1)",
+                "  - Default (no quantity specified): removes 1 item",
+                "  - IMPORTANT: 'bottles' usually means 'water' - use 'water' as item_name",
+                "When customer wants to change quantity: CALL modify_quantity function",
+                "When customer wants to see order: CALL review_order function",
+                "When customer is done: CALL finalize_order function",
+                "Acknowledge items briefly (don't read back the entire order)",
+                "💡 COMBO UPGRADES: If add_item response includes 'Great news!' about a combo:",
+                "  - This means a money-saving combo is available",
+                "  - If customer says 'yes', 'sure', 'okay', 'upgrade' or agrees: CALL upgrade_to_combo",
+                "  - Determine combo type from the suggestion (taco, burrito, or both)",
+                "  - If response mentions TWO combos, use combo_type='both'",
+                "NEVER quote prices yourself - let the functions provide them"
+            ]) \
             .set_step_criteria("Customer says they're done ordering") \
             .set_functions(["add_item", "remove_item", "modify_quantity", "review_order", "finalize_order", "upgrade_to_combo", "cancel_order"]) \
             .set_valid_steps(["confirming_order"])
         
         # CONFIRMING ORDER STATE
         default_context.add_step("confirming_order") \
-            .add_section("Your Response",
-                "Say: 'Your total is $${global_data.order_state.total}. "
-                "Does everything on your screen look correct?'") \
-            .add_section("What to Do",
-                "1. SPEAK the total and confirmation question\n"
-                "2. LISTEN for their response\n"
-                "3. If yes → Say 'Great!' → process_payment()\n"
-                "4. If they want changes → Make the changes → Stay in this state") \
+            .add_section("Current Task", "Confirm the complete order") \
+            .add_bullets("Instructions", [
+                "The customer can see their order on the screen",
+                "DO NOT read back the items - they can see them",
+                "Just ask if the order on screen looks correct",
+                "If they confirm, use process_payment",
+                "If they want changes, use add_item or remove_item",
+                "Only mention the total price, not individual items"
+            ]) \
             .set_step_criteria("Order is confirmed as correct") \
             .set_functions(["process_payment", "add_item", "remove_item", "cancel_order"]) \
             .set_valid_steps(["payment_processing", "taking_order"])
         
         # PAYMENT PROCESSING STATE
         default_context.add_step("payment_processing") \
-            .add_section("Your Response",
-                "Say: 'Perfect! Please pull forward to the first window to pay. "
-                "Your total is $${global_data.order_state.total}.'") \
-            .add_section("Then",
-                "1. SPEAK the payment instructions\n"
-                "2. Call complete_order() to generate order number\n"
-                "3. Thank them warmly") \
+            .add_section("Current Task", "Direct customer to payment") \
+            .add_bullets("Instructions", [
+                "Order number: ${global_data.order_state.order_number}",
+                "Total: $${global_data.order_state.total}",
+                "Tell them to pull forward to the first window",
+                "Thank them for their order",
+                "Call complete_order to finish"
+            ]) \
             .set_step_criteria("Payment instructions given") \
             .set_functions(["complete_order"]) \
             .set_valid_steps(["order_complete"])
-
+        
         # ORDER COMPLETE STATE
         default_context.add_step("order_complete") \
-            .add_section("Your Response",
-                "Say: 'Thank you for choosing Holy Guacamole! "
-                "Your order number is ${global_data.order_state.order_number}. "
-                "Have a wonderful day!'") \
-            .add_section("If They Want Another Order",
-                "Use new_order() to start fresh") \
+            .add_section("Current Task", "Order is complete") \
+            .add_bullets("Final Steps", [
+                "Thank the customer",
+                "Wish them a great day",
+                "If they want another order, use new_order"
+            ]) \
             .set_functions(["new_order"]) \
             .set_valid_steps(["greeting"])
         
@@ -1593,8 +1562,8 @@ class HolyGuacamoleAgent(AgentBase):
         self.set_param("end_of_speech_timeout", 700)
 
         self.set_prompt_llm_params(
-            temperature=0.3,  # Increased for more natural conversation with llama-3.1-8b
-            top_p=0.3,        # Wider sampling for more variety in responses
+            temperature=0.1,
+            top_p=0.1,
             model="llama-3.1-8b-instruct-turbo@together.ai"
         )
 
