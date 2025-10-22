@@ -168,7 +168,6 @@ class HolyGuacamoleAgent(AgentBase):
                 "When customer wants to change quantity: CALL modify_quantity function",
                 "When customer wants to see order: CALL review_order function",
                 "When customer is done: CALL finalize_order function",
-                "Acknowledge items briefly (don't read back the entire order)",
                 "💡 COMBO UPGRADES: If add_item response includes 'Great news!' about a combo:",
                 "  - This means a money-saving combo is available",
                 "  - If customer says 'yes', 'sure', 'okay', 'upgrade' or agrees: CALL upgrade_to_combo",
