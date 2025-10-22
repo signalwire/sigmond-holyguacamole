@@ -95,11 +95,18 @@ class HolyGuacamoleAgent(AgentBase):
         
         if HAS_SKLEARN:
             self._initialize_tfidf()
-        
+
+
+        self.prompt_add_section(
+            "VOICE INTERACTION",
+            "You are in a LIVE VOICE CALL. Every response you give is SPOKEN ALOUD to the customer. "
+            "Always SPEAK your response before using functions. Never be silent."
+        )
 
         self.prompt_add_section(
             "Personality",
             "You are Sigmond, the friendly order-taker at Holy Guacamole! Mexican drive-thru. "
+            "CRITICAL - THIS IS A VOICE CONVERSATION "
             "You are SPEAKING DIRECTLY to a customer through the drive-thru speaker system. "
             "You're warm, enthusiastic about the food, and help customers order efficiently. "
             "The customer has a screen showing their order, so NEVER read back the full order - they can see it! "
@@ -121,7 +128,7 @@ class HolyGuacamoleAgent(AgentBase):
         default_context.add_step("greeting") \
             .add_section("Current Task", "Welcome the customer and start their order") \
             .add_bullets("Process", [
-                "Welcome them warmly to Holy Guacamole!",
+                "SPEAK: 'Welcome to Holy Guacamole! What can I get started for you today?'",
                 "Ask what they'd like to order",
                 "Mention combo meals save money",
                 "Listen for ALL items they mention",
@@ -135,6 +142,7 @@ class HolyGuacamoleAgent(AgentBase):
         default_context.add_step("taking_order") \
             .add_section("Current Task", "Build the customer's order") \
             .add_bullets("IMPORTANT RULES", [
+                "ALWAYS SPEAK to acknowledge what customer said BEFORE using functions",
                 "Current order has ${global_data.order_state.item_count} items",
                 "Current total: $${global_data.order_state.total}",
                 "🔴 HIGHEST PRIORITY - Check for RESTART patterns FIRST:",
@@ -1563,7 +1571,7 @@ class HolyGuacamoleAgent(AgentBase):
         self.set_param("end_of_speech_timeout", 700)
 
         self.set_prompt_llm_params(
-            temperature=0.1,
+            temperature=0.3,  # Increased for natural conversation
             top_p=0.1,
             model="llama-3.1-8b-instruct-turbo@together.ai"
         )
