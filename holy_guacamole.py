@@ -1559,12 +1559,11 @@ class HolyGuacamoleAgent(AgentBase):
         ])
         
         # Set conversation parameters (video URLs will be set dynamically)
-#        self.set_param("end_of_speech_timeout", 700)
+        self.set_param("ai_model_62c3bdb19a89", "gpt-oss-120b@groq.ai")
 
         self.set_prompt_llm_params(
             temperature=0.1,
-            top_p=0.1,
-            model="gpt-4.1-mini"
+            top_p=0.1
         )
 
         # Optional post-prompt URL from environment
