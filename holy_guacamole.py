@@ -792,7 +792,7 @@ class HolyGuacamoleAgent(AgentBase):
             # Send event to UI based on whether item was completely removed
             if item_completely_removed:
                 # Item completely removed
-                result.swml_user_event({
+                result.add_action("user_event", {
                     "type": "item_removed",
                     "sku": removed_item["sku"],
                     "order_total": order_state["total"],
@@ -802,7 +802,7 @@ class HolyGuacamoleAgent(AgentBase):
                 })
             else:
                 # Item still exists with reduced quantity
-                result.swml_user_event({
+                result.add_action("user_event", {
                     "type": "quantity_modified",
                     "sku": removed_item["sku"],
                     "new_quantity": removed_item["quantity"],
@@ -901,7 +901,7 @@ class HolyGuacamoleAgent(AgentBase):
             save_order_state(result, order_state, global_data)
             
             # Send event to UI
-            result.swml_user_event({
+            result.add_action("user_event", {
                 "type": "quantity_modified",
                 "sku": modified_item.get("sku"),
                 "new_quantity": new_quantity if new_quantity > 0 else 0,
@@ -937,7 +937,7 @@ class HolyGuacamoleAgent(AgentBase):
             result = SwaigFunctionResult(response)
             
             # Send complete order to UI
-            result.swml_user_event({
+            result.add_action("user_event", {
                 "type": "order_reviewed",
                 "items": order_state["items"],
                 "subtotal": order_state["subtotal"],
@@ -974,7 +974,7 @@ class HolyGuacamoleAgent(AgentBase):
             result.swml_change_step("confirming_order")
             
             # Send event to UI with complete order details
-            result.swml_user_event({
+            result.add_action("user_event", {
                 "type": "order_finalized",
                 "items": order_state["items"],
                 "subtotal": order_state["subtotal"],
@@ -1013,7 +1013,7 @@ class HolyGuacamoleAgent(AgentBase):
             result.swml_change_step("payment_processing")
             
             # Send event to UI
-            result.swml_user_event({
+            result.add_action("user_event", {
                 "type": "payment_started",
                 "order_number": order_state["order_number"],
                 "total": order_state["total"]
@@ -1055,7 +1055,7 @@ class HolyGuacamoleAgent(AgentBase):
             result.swml_change_step("order_complete")
             
             # Send event to UI
-            result.swml_user_event({
+            result.add_action("user_event", {
                 "type": "order_completed",
                 "order_number": order_number
             })
@@ -1102,7 +1102,7 @@ class HolyGuacamoleAgent(AgentBase):
                 result.context = "greeting"
             
             # Send event to UI
-            result.swml_user_event({
+            result.add_action("user_event", {
                 "type": "order_cancelled",
                 "items": [],
                 "subtotal": 0,
@@ -1143,7 +1143,7 @@ class HolyGuacamoleAgent(AgentBase):
             result.swml_change_step("greeting")
             
             # Send event to UI
-            result.swml_user_event({
+            result.add_action("user_event", {
                 "type": "new_order"
             })
             
@@ -1310,7 +1310,7 @@ class HolyGuacamoleAgent(AgentBase):
                 save_order_state(result, order_state, global_data)
                 
                 # Send event
-                result.swml_user_event({
+                result.add_action("user_event", {
                     "type": "combo_upgraded",
                     "items": order_state["items"],
                     "removed_items": [{"name": item["name"], "quantity": item["quantity"]} for item in removed_items],
@@ -1526,7 +1526,7 @@ class HolyGuacamoleAgent(AgentBase):
             save_order_state(result, order_state, global_data)
             
             # Send comprehensive event to UI
-            result.swml_user_event({
+            result.add_action("user_event", {
                 "type": "combo_upgraded",
                 "items": order_state["items"],
                 "removed_items": [{"name": item["name"], "quantity": item["quantity"]} for item in removed_items],
@@ -1559,12 +1559,12 @@ class HolyGuacamoleAgent(AgentBase):
         ])
         
         # Set conversation parameters (video URLs will be set dynamically)
-        self.set_param("end_of_speech_timeout", 700)
+#        self.set_param("end_of_speech_timeout", 700)
 
         self.set_prompt_llm_params(
             temperature=0.1,
             top_p=0.1,
-            model="4o-mini"
+            model="gpt-4.1-mini"
         )
 
         # Optional post-prompt URL from environment
