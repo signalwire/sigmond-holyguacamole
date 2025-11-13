@@ -516,7 +516,11 @@ async function connect() {
         roomSession = await client.dial({
             to: DESTINATION,
             rootElement: videoContainer,
-            audio: true,
+            audio: {
+                echoCancellation: false,
+                noiseSuppression: false,
+                autoGainControl: false
+            },
             video: true,
             negotiateVideo: true,  // Important for video negotiation
             userVariables: {
