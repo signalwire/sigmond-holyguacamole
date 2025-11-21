@@ -517,7 +517,7 @@ async function connect() {
             to: DESTINATION,
             rootElement: videoContainer,
             audio: {
-                echoCancellation: false,
+                echoCancellation: true,
                 noiseSuppression: false,
                 autoGainControl: false
             },
