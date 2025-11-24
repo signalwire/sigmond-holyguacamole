@@ -1,4 +1,4 @@
-signalwire-agents==0.1.53
+signalwire-agents==1.0.2
 fastapi==0.115.12
 uvicorn==0.34.2
 python-multipart==0.0.17
