@@ -4,11 +4,10 @@ Holy Guacamole! - AI-Powered Drive-Thru Order Agent
 Web UI and SWML served on the same port
 """
 
-import json
 import random
 import os
 from pathlib import Path
-from signalwire_agents import AgentBase
+from signalwire_agents import AgentBase, AgentServer
 from signalwire_agents.core.function_result import SwaigFunctionResult
 
 # Import for TF-IDF vector matching
@@ -20,13 +19,6 @@ try:
 except ImportError:
     HAS_SKLEARN = False
     print("Warning: scikit-learn not installed. Falling back to fuzzy matching.")
-
-# Try to import WebService - it may not be available in all environments
-try:
-    from signalwire_agents.web import WebService
-    HAS_WEBSERVICE = True
-except ImportError:
-    HAS_WEBSERVICE = False
 
 # Phase 1: Simple menu structure with descriptions
 MENU = {
@@ -1559,7 +1551,6 @@ class HolyGuacamoleAgent(AgentBase):
         ])
         
         # Set conversation parameters (video URLs will be set dynamically)
-#        self.set_param("ai_model_62c3bdb19a89", "gpt-oss-120b@groq.ai")
         self.set_param("turn_detection_timeout", "300")
         self.set_param("end_of_speech_timeout", "2000")
 
@@ -1656,141 +1647,30 @@ class HolyGuacamoleAgent(AgentBase):
         )
         self.menu_vectors = self.vectorizer.fit_transform(corpus)
     
-    def get_app(self):
-        """
-        Override get_app to create custom app with all endpoints
-        Following the multi_endpoint_agent.py pattern for cleaner architecture
-        """
-        if self._app is None:
-            from fastapi import FastAPI, Request, Response
-            from fastapi.middleware.cors import CORSMiddleware
-            from fastapi.responses import FileResponse, JSONResponse
-            from fastapi.staticfiles import StaticFiles
-            
-            # Create the FastAPI app
-            app = FastAPI(
-                title="Holy Guacamole Drive-Thru",
-                description="AI-powered Mexican food ordering system with Sigmond"
-            )
-            
-            # Add CORS middleware
-            app.add_middleware(
-                CORSMiddleware,
-                allow_origins=["*"],
-                allow_credentials=True,
-                allow_methods=["*"],
-                allow_headers=["*"],
-            )
-            
-            # Set up paths
-            self.bot_dir = Path(__file__).parent
-            self.web_dir = self.bot_dir / "web"
-            
-            # API Routes (before static files so they take precedence)
-            @app.get("/api/menu")
-            async def get_menu():
-                """Serve the menu data from backend"""
-                return JSONResponse(content={"menu": MENU})
-            
-            @app.get("/api/info")
-            async def get_info():
-                """Provide system information"""
-                return JSONResponse(content={
-                    "agent": self.get_name(),
-                    "version": "1.0.0",
-                    "endpoints": {
-                        "ui": "/",
-                        "menu": "/api/menu",
-                        "swml": "/swml",
-                        "swaig": "/swml/swaig",
-                        "health": "/health"
-                    }
-                })
-            
-            @app.get("/health")
-            async def health_check():
-                return JSONResponse(content={
-                    "status": "healthy", 
-                    "agent": self.get_name()
-                })
-            
-            # Create router for SWML endpoints
-            router = self.as_router()
-            
-            # Mount the SWML router at /swml 
-            app.include_router(router, prefix=self.route)
-            
-            # Add explicit handler for /swml (without trailing slash) since SignalWire posts here
-            @app.post("/swml")
-            async def handle_swml(request: Request, response: Response):
-                """Handle POST to /swml - SignalWire's webhook endpoint"""
-                return await self._handle_root_request(request)
-            
-            # Optionally also handle GET for testing
-            @app.get("/swml")
-            async def handle_swml_get(request: Request, response: Response):
-                """Handle GET to /swml for testing"""
-                return await self._handle_root_request(request)
-            
-            # Mount static files at root (this handles everything else)
-            # The web directory contains all static files (HTML, JS, CSS, videos, etc.)
-            if self.web_dir.exists():
-                app.mount("/", StaticFiles(directory=str(self.web_dir), html=True), name="static")
-            
-            self._app = app
-        
-        return self._app
-    
-    def serve(self, host=None, port=None):
-        """
-        Override serve to use our custom app
-        Now simplified - just handles serving, not app creation
-        """
-        import uvicorn
-        
-        # Get host and port from parameters or defaults
-        host = host or self.host or "0.0.0.0"
-        port = port or self.port or 8080
-        
-        # Get our custom app with all endpoints
-        app = self.get_app()
-        
-        # Get auth credentials for display
-        username, password = self.get_basic_auth_credentials()
-        
-        # Print startup information
-        print("=" * 60)
-        print("🥑 Holy Guacamole! Drive-Thru System")
-        print("=" * 60)
-        print(f"\nServer: http://{host}:{port}")
-        print(f"Basic Auth: {username}:{password}")
-        print("\nEndpoints:")
-        print(f"  Web UI:     http://{host}:{port}/")
-        print(f"  Menu API:   http://{host}:{port}/api/menu")
-        print(f"  System API: http://{host}:{port}/api/info")
-        print(f"  SWML:       http://{host}:{port}/swml")
-        print(f"  SWAIG:      http://{host}:{port}/swml/swaig")
-        print(f"  Health:     http://{host}:{port}/health")
-        print("=" * 60)
-        print("\nPress Ctrl+C to stop\n")
-        
-        # Run the server
-        try:
-            uvicorn.run(app, host=host, port=port)
-        except KeyboardInterrupt:
-            print("\n🛑 Stopping Holy Guacamole server...")
-            print("Thank you for using Holy Guacamole! 🥑")
+
+
+def create_server():
+    """Create AgentServer with static file mounting."""
+    host = os.environ.get('HOST', '0.0.0.0')
+    port = int(os.environ.get('PORT', 5000))
+
+    server = AgentServer(host=host, port=port)
+    server.register(HolyGuacamoleAgent(), "/swml")
+
+    # Add custom API routes for the web UI
+    @server.app.get("/api/menu")
+    async def get_menu():
+        """Serve the menu data from backend"""
+        return {"menu": MENU}
+
+    # Serve static files using SDK's built-in method
+    web_dir = Path(__file__).parent / "web"
+    if web_dir.exists():
+        server.serve_static_files(str(web_dir))
+
+    return server
 
 
 if __name__ == "__main__":
-    import os
-    
-    # Create agent instance
-    agent = HolyGuacamoleAgent()
-    
-    # Get port from environment variable (for Dokku) or use 5000 as default
-    port = int(os.environ.get('PORT', 5000))
-    host = os.environ.get('HOST', '0.0.0.0')
-    
-    print(f"Starting server on {host}:{port}")
-    agent.serve(host=host, port=port)
+    server = create_server()
+    server.run()
